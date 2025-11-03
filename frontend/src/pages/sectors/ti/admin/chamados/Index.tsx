@@ -702,7 +702,10 @@ export default function ChamadosPage() {
                       description: "Chamado excluído com sucesso",
                     });
                   } catch (e) {
-                    const errorMsg = e instanceof Error ? e.message : "Erro ao excluir chamado";
+                    const errorMsg =
+                      e instanceof Error
+                        ? e.message
+                        : "Erro ao excluir chamado";
                     toast({
                       title: "Erro na exclusão",
                       description: errorMsg,
