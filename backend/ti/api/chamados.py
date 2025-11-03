@@ -88,20 +88,25 @@ def criar_chamado(payload: ChamadoCreate, db: Session = Depends(get_db)):
             db.add(n)
             db.commit()
             db.refresh(n)
-            import anyio
-            anyio.from_thread.run(sio.emit, "chamado:created", {"id": ch.id})
-            anyio.from_thread.run(sio.emit, "notification:new", {
-                "id": n.id,
-                "tipo": n.tipo,
-                "titulo": n.titulo,
-                "mensagem": n.mensagem,
-                "recurso": n.recurso,
-                "recurso_id": n.recurso_id,
-                "acao": n.acao,
-                "dados": n.dados,
-                "lido": n.lido,
-                "criado_em": n.criado_em.isoformat() if n.criado_em else None,
-            })
+            try:
+                sio.emit("chamado:created", {"id": ch.id}, skip_sid=None)
+            except Exception:
+                pass
+            try:
+                sio.emit("notification:new", {
+                    "id": n.id,
+                    "tipo": n.tipo,
+                    "titulo": n.titulo,
+                    "mensagem": n.mensagem,
+                    "recurso": n.recurso,
+                    "recurso_id": n.recurso_id,
+                    "acao": n.acao,
+                    "dados": n.dados,
+                    "lido": n.lido,
+                    "criado_em": n.criado_em.isoformat() if n.criado_em else None,
+                }, skip_sid=None)
+            except Exception:
+                pass
         except Exception:
             pass
         try:
