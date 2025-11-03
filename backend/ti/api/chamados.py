@@ -568,7 +568,7 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session 
         raise HTTPException(status_code=500, detail=f"Erro ao atualizar status: {e}")
 
 @router.delete("/{chamado_id}")
-def deletar_chamado(chamado_id: int, payload: ChamadoDeleteRequest, db: Session = Depends(get_db)):
+def deletar_chamado(chamado_id: int, payload: ChamadoDeleteRequest = Body(...), db: Session = Depends(get_db)):
     try:
         user = db.query(User).filter(User.email == payload.email).first()
         if not user:
