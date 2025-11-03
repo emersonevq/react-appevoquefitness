@@ -218,7 +218,7 @@ export default function ChamadosPage() {
 
   const [items, setItems] = useState<UiTicket[]>([]);
   const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [confirmPwd, setConfirmPwd] = useState("");
+  const [confirmChecked, setConfirmChecked] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const { user } = useAuthContext();
 
