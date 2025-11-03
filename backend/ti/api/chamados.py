@@ -581,6 +581,30 @@ def deletar_chamado(chamado_id: int, payload: ChamadoDeleteRequest, db: Session 
             raise HTTPException(status_code=404, detail="Chamado não encontrado")
         codigo = ch.codigo
         protocolo = ch.protocolo
+
+        # Delete related records first (foreign key constraints)
+        try:
+            db.execute(text("DELETE FROM chamado_anexo WHERE chamado_id = :id"), {"id": chamado_id})
+        except Exception:
+            pass
+        try:
+            db.execute(text("DELETE FROM ticket_anexos WHERE chamado_id = :id"), {"id": chamado_id})
+        except Exception:
+            pass
+        try:
+            db.execute(text("DELETE FROM historico_ticket WHERE chamado_id = :id"), {"id": chamado_id})
+        except Exception:
+            pass
+        try:
+            db.execute(text("DELETE FROM historico_status WHERE chamado_id = :id"), {"id": chamado_id})
+        except Exception:
+            pass
+        try:
+            db.execute(text("DELETE FROM historico_anexo WHERE chamado_id = :id"), {"id": chamado_id})
+        except Exception:
+            pass
+
+        # Now delete the chamado itself
         db.delete(ch)
         db.commit()
         try:
