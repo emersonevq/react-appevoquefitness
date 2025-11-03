@@ -657,54 +657,71 @@ export default function ChamadosPage() {
       {/* Delete confirmation */}
       <Dialog open={!!confirmId} onOpenChange={(o) => !o && setConfirmId(null)}>
         <DialogContent className="max-w-md">
-          <div className="space-y-3">
-            <div className="text-lg font-semibold">Excluir chamado</div>
-            <p className="text-sm text-muted-foreground">
-              Esta ação apagará definitivamente o chamado e não poderá ser
-              desfeita.
-            </p>
-            <div className="grid gap-2">
-              <label className="text-sm">Confirme sua senha</label>
-              <input
-                type="password"
-                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                value={confirmPwd}
-                onChange={(e) => setConfirmPwd(e.target.value)}
-              />
+          <div className="space-y-4">
+            <div>
+              <div className="text-lg font-semibold">Excluir chamado</div>
+              <p className="text-sm text-red-600 font-medium mt-2">
+                ⚠️ Atenção: Esta ação é irreversível
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                O chamado será permanentemente deletado, incluindo todo o histórico e anexos.
+              </p>
             </div>
-            <div className="flex justify-end gap-2 pt-1">
-              <Button variant="secondary" onClick={() => setConfirmId(null)}>
+            <div className="flex items-center gap-2 p-3 bg-red-50 rounded-md border border-red-200">
+              <input
+                type="checkbox"
+                id="confirm-delete"
+                checked={confirmChecked}
+                onChange={(e) => setConfirmChecked(e.target.checked)}
+                className="w-4 h-4"
+              />
+              <label htmlFor="confirm-delete" className="text-sm font-medium cursor-pointer">
+                Confirmo que desejo deletar este chamado permanentemente
+              </label>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setConfirmId(null);
+                  setConfirmChecked(false);
+                }}
+              >
                 Cancelar
               </Button>
               <Button
                 variant="destructive"
-                disabled={!confirmPwd || confirmLoading}
+                disabled={!confirmChecked || confirmLoading}
                 onClick={async () => {
-                  if (!confirmId || !user?.email) return;
+                  if (!confirmId) return;
                   setConfirmLoading(true);
                   try {
                     const r = await apiFetch(`/chamados/${confirmId}`, {
                       method: "DELETE",
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify({
-                        email: user.email,
-                        senha: confirmPwd,
+                        confirmed: true,
                       }),
                     });
-                    if (!r.ok) throw new Error(await r.text());
+                    if (!r.ok) {
+                      const error = await r.text();
+                      console.error("Delete error:", error);
+                      throw new Error(error);
+                    }
                     setItems((prev) =>
                       prev.filter((it) => it.id !== confirmId),
                     );
                     setConfirmId(null);
-                    setConfirmPwd("");
+                    setConfirmChecked(false);
                   } catch (e) {
-                    // noop: in real app show toast
+                    console.error("Delete failed:", e);
+                    // Show error toast if needed
                   } finally {
                     setConfirmLoading(false);
                   }
                 }}
               >
-                Confirmar exclusão
+                Deletar permanentemente
               </Button>
             </div>
           </div>
