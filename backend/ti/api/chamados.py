@@ -569,44 +569,38 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session 
 
 @router.delete("/{chamado_id}")
 def deletar_chamado(chamado_id: int, payload: ChamadoDeleteRequest, db: Session = Depends(get_db)):
+    codigo = None
+    protocolo = None
     try:
+        # Validar usuário
         user = db.query(User).filter(User.email == payload.email).first()
         if not user:
             raise HTTPException(status_code=401, detail="Usuário não encontrado")
-        from werkzeug.security import check_password_hash as _chk
-        if not _chk(user.senha_hash, payload.senha):
+
+        # Validar senha
+        if not check_password_hash(user.senha_hash, payload.senha):
             raise HTTPException(status_code=401, detail="Senha inválida")
+
+        # Obter chamado
         ch = db.query(Chamado).filter(Chamado.id == chamado_id).first()
         if not ch:
             raise HTTPException(status_code=404, detail="Chamado não encontrado")
+
         codigo = ch.codigo
         protocolo = ch.protocolo
 
-        # Delete related records first (foreign key constraints)
-        try:
-            db.execute(text("DELETE FROM chamado_anexo WHERE chamado_id = :id"), {"id": chamado_id})
-        except Exception:
-            pass
-        try:
-            db.execute(text("DELETE FROM ticket_anexos WHERE chamado_id = :id"), {"id": chamado_id})
-        except Exception:
-            pass
-        try:
-            db.execute(text("DELETE FROM historico_ticket WHERE chamado_id = :id"), {"id": chamado_id})
-        except Exception:
-            pass
-        try:
-            db.execute(text("DELETE FROM historico_status WHERE chamado_id = :id"), {"id": chamado_id})
-        except Exception:
-            pass
-        try:
-            db.execute(text("DELETE FROM historico_anexo WHERE chamado_id = :id"), {"id": chamado_id})
-        except Exception:
-            pass
+        # Deletar registros relacionados para evitar problemas com foreign keys
+        db.execute(text("DELETE FROM chamado_anexo WHERE chamado_id = :cid"), {"cid": chamado_id})
+        db.execute(text("DELETE FROM ticket_anexos WHERE chamado_id = :cid"), {"cid": chamado_id})
+        db.execute(text("DELETE FROM historico_ticket WHERE chamado_id = :cid"), {"cid": chamado_id})
+        db.execute(text("DELETE FROM historico_status WHERE chamado_id = :cid"), {"cid": chamado_id})
+        db.execute(text("DELETE FROM historico_anexo WHERE chamado_id = :cid"), {"cid": chamado_id})
 
-        # Now delete the chamado itself
+        # Deletar o chamado
         db.delete(ch)
         db.commit()
+
+        # Tentar criar notificação (não falha a requisição se falhar)
         try:
             Notification.__table__.create(bind=engine, checkfirst=True)
             dados = json.dumps({
@@ -626,24 +620,37 @@ def deletar_chamado(chamado_id: int, payload: ChamadoDeleteRequest, db: Session 
             db.add(n)
             db.commit()
             db.refresh(n)
+        except Exception as e:
+            print(f"[CHAMADO] Erro ao criar notificação: {e}")
+            db.rollback()
+
+        # Tentar emitir eventos Socket.IO (não falha a requisição se falhar)
+        try:
             import anyio
             anyio.from_thread.run(sio.emit, "chamado:deleted", {"id": chamado_id})
-            anyio.from_thread.run(sio.emit, "notification:new", {
-                "id": n.id,
-                "tipo": n.tipo,
-                "titulo": n.titulo,
-                "mensagem": n.mensagem,
-                "recurso": n.recurso,
-                "recurso_id": n.recurso_id,
-                "acao": n.acao,
-                "dados": n.dados,
-                "lido": n.lido,
-                "criado_em": n.criado_em.isoformat() if n.criado_em else None,
-            })
-        except Exception:
-            pass
+            try:
+                anyio.from_thread.run(sio.emit, "notification:new", {
+                    "id": n.id if 'n' in locals() else chamado_id,
+                    "tipo": "chamado",
+                    "titulo": f"Chamado excluído: {codigo}",
+                    "mensagem": f"Chamado {protocolo} removido",
+                    "recurso": "chamado",
+                    "recurso_id": chamado_id,
+                    "acao": "excluido",
+                    "dados": json.dumps({"id": chamado_id, "codigo": codigo, "protocolo": protocolo}, ensure_ascii=False),
+                    "lido": False,
+                    "criado_em": now_brazil_naive().isoformat() if hasattr(now_brazil_naive(), 'isoformat') else None,
+                })
+            except Exception:
+                pass
+        except Exception as e:
+            print(f"[CHAMADO] Erro ao emitir eventos Socket.IO: {e}")
+
         return {"ok": True}
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao excluir chamado: {e}")
+        import traceback
+        print(f"[CHAMADO] Erro ao excluir chamado {chamado_id}: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erro ao excluir chamado: {str(e)}")
