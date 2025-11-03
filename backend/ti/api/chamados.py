@@ -15,7 +15,7 @@ from werkzeug.security import check_password_hash
 from ..models.notification import Notification
 import json
 from core.utils import now_brazil_naive
-from ..models import Chamado, User, TicketAnexo, ChamadoAnexo, HistoricoTicket, HistoricoStatus
+from ..models import Chamado, User, TicketAnexo, ChamadoAnexo, HistoricoTicket, HistoricoStatus, HistoricoAnexo
 from ti.schemas.attachment import AnexoOut
 from ti.schemas.ticket import HistoricoItem, HistoricoResponse
 from sqlalchemy import inspect, text
@@ -579,6 +579,16 @@ def deletar_chamado(chamado_id: int, payload: ChamadoDeleteRequest = Body(...), 
         ch = db.query(Chamado).filter(Chamado.id == chamado_id).first()
         if not ch:
             raise HTTPException(status_code=404, detail="Chamado não encontrado")
+
+        # Delete all related records to avoid foreign key constraint violations
+        db.query(ChamadoAnexo).filter(ChamadoAnexo.chamado_id == chamado_id).delete()
+        db.query(HistoricoStatus).filter(HistoricoStatus.chamado_id == chamado_id).delete()
+        db.query(HistoricoTicket).filter(HistoricoTicket.chamado_id == chamado_id).delete()
+        db.query(HistoricoAnexo).filter(HistoricoAnexo.chamado_id == chamado_id).delete()
+        db.query(TicketAnexo).filter(TicketAnexo.chamado_id == chamado_id).delete()
+        db.commit()
+
+        # Now delete the chamado
         db.delete(ch)
         db.commit()
         try:
