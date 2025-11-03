@@ -545,20 +545,25 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session 
             db.add(hs)
             db.commit()
             db.refresh(n)
-            import anyio
-            anyio.from_thread.run(sio.emit, "chamado:status", {"id": ch.id, "status": ch.status})
-            anyio.from_thread.run(sio.emit, "notification:new", {
-                "id": n.id,
-                "tipo": n.tipo,
-                "titulo": n.titulo,
-                "mensagem": n.mensagem,
-                "recurso": n.recurso,
-                "recurso_id": n.recurso_id,
-                "acao": n.acao,
-                "dados": n.dados,
-                "lido": n.lido,
-                "criado_em": n.criado_em.isoformat() if n.criado_em else None,
-            })
+            try:
+                sio.emit("chamado:status", {"id": ch.id, "status": ch.status}, skip_sid=None)
+            except Exception:
+                pass
+            try:
+                sio.emit("notification:new", {
+                    "id": n.id,
+                    "tipo": n.tipo,
+                    "titulo": n.titulo,
+                    "mensagem": n.mensagem,
+                    "recurso": n.recurso,
+                    "recurso_id": n.recurso_id,
+                    "acao": n.acao,
+                    "dados": n.dados,
+                    "lido": n.lido,
+                    "criado_em": n.criado_em.isoformat() if n.criado_em else None,
+                }, skip_sid=None)
+            except Exception:
+                pass
         except Exception:
             db.rollback()
             pass
