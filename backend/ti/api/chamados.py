@@ -579,65 +579,116 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session 
 
 @router.delete("/{chamado_id}")
 def deletar_chamado(chamado_id: int, payload: ChamadoDeleteRequest, db: Session = Depends(get_db)):
-    codigo = None
-    protocolo = None
     try:
-        # Validar usuário
+        # Step 1: Validar usuário existe
+        print(f"[CHAMADO_DELETE] Iniciando deleção do chamado {chamado_id} por {payload.email}")
         user = db.query(User).filter(User.email == payload.email).first()
         if not user:
+            print(f"[CHAMADO_DELETE] Usuário {payload.email} não encontrado")
             raise HTTPException(status_code=401, detail="Usuário não encontrado")
 
-        # Validar senha
-        if not check_password_hash(user.senha_hash, payload.senha):
-            raise HTTPException(status_code=401, detail="Senha inválida")
+        # Step 2: Validar senha
+        print(f"[CHAMADO_DELETE] Validando senha para usuário {user.id}")
+        try:
+            if not check_password_hash(user.senha_hash, payload.senha):
+                print(f"[CHAMADO_DELETE] Senha inválida para usuário {user.id}")
+                raise HTTPException(status_code=401, detail="Senha inválida")
+        except Exception as e:
+            print(f"[CHAMADO_DELETE] Erro ao validar senha: {type(e).__name__}: {e}")
+            raise HTTPException(status_code=401, detail="Erro na validação de senha")
 
-        # Obter chamado
+        # Step 3: Obter o chamado
+        print(f"[CHAMADO_DELETE] Procurando chamado {chamado_id}")
         ch = db.query(Chamado).filter(Chamado.id == chamado_id).first()
         if not ch:
+            print(f"[CHAMADO_DELETE] Chamado {chamado_id} não encontrado")
             raise HTTPException(status_code=404, detail="Chamado não encontrado")
 
         codigo = ch.codigo
         protocolo = ch.protocolo
+        print(f"[CHAMADO_DELETE] Encontrado: {codigo} / {protocolo}")
 
-        # Deletar registros relacionados para evitar problemas com foreign keys
+        # Step 4: Deletar registros relacionados (um por um com logging)
+        print(f"[CHAMADO_DELETE] Deletando registros relacionados")
+
+        # Tentar usar ORM primeiro, depois SQL se falhar
         try:
-            db.execute(text("DELETE FROM chamado_anexo WHERE chamado_id = :cid"), {"cid": chamado_id})
+            from ti.models import ChamadoAnexo
+            for anexo in db.query(ChamadoAnexo).filter(ChamadoAnexo.chamado_id == chamado_id).all():
+                db.delete(anexo)
+            db.commit()
+            print(f"[CHAMADO_DELETE] ✓ Deletados anexos do chamado via ORM")
         except Exception as e:
-            print(f"[DEBUG] Erro ao deletar chamado_anexo: {e}")
+            print(f"[CHAMADO_DELETE] Erro ao deletar anexos via ORM: {e}, tentando SQL...")
+            try:
+                db.execute(text("DELETE FROM chamado_anexo WHERE chamado_id = :cid"), {"cid": chamado_id})
+                db.commit()
+                print(f"[CHAMADO_DELETE] ✓ Deletados anexos do chamado via SQL")
+            except Exception as e2:
+                print(f"[CHAMADO_DELETE] Aviso: Não foi possível deletar anexos: {e2}")
 
         try:
-            db.execute(text("DELETE FROM ticket_anexos WHERE chamado_id = :cid"), {"cid": chamado_id})
+            from ti.models import TicketAnexo
+            for anexo in db.query(TicketAnexo).filter(TicketAnexo.chamado_id == chamado_id).all():
+                db.delete(anexo)
+            db.commit()
+            print(f"[CHAMADO_DELETE] ✓ Deletados anexos de ticket via ORM")
         except Exception as e:
-            print(f"[DEBUG] Erro ao deletar ticket_anexos: {e}")
+            print(f"[CHAMADO_DELETE] Erro ao deletar anexos de ticket via ORM: {e}, tentando SQL...")
+            try:
+                db.execute(text("DELETE FROM ticket_anexos WHERE chamado_id = :cid"), {"cid": chamado_id})
+                db.commit()
+                print(f"[CHAMADO_DELETE] ✓ Deletados anexos de ticket via SQL")
+            except Exception as e2:
+                print(f"[CHAMADO_DELETE] Aviso: Não foi possível deletar anexos de ticket: {e2}")
 
         try:
-            db.execute(text("DELETE FROM historico_ticket WHERE chamado_id = :cid"), {"cid": chamado_id})
+            from ti.models import HistoricoTicket
+            for hist in db.query(HistoricoTicket).filter(HistoricoTicket.chamado_id == chamado_id).all():
+                db.delete(hist)
+            db.commit()
+            print(f"[CHAMADO_DELETE] ✓ Deletado histórico de ticket via ORM")
         except Exception as e:
-            print(f"[DEBUG] Erro ao deletar historico_ticket: {e}")
+            print(f"[CHAMADO_DELETE] Erro ao deletar histórico de ticket: {e}, tentando SQL...")
+            try:
+                db.execute(text("DELETE FROM historico_ticket WHERE chamado_id = :cid"), {"cid": chamado_id})
+                db.commit()
+                print(f"[CHAMADO_DELETE] ✓ Deletado histórico de ticket via SQL")
+            except Exception as e2:
+                print(f"[CHAMADO_DELETE] Aviso: Não foi possível deletar histórico de ticket: {e2}")
 
         try:
-            db.execute(text("DELETE FROM historico_status WHERE chamado_id = :cid"), {"cid": chamado_id})
+            from ti.models import HistoricoStatus
+            for hist in db.query(HistoricoStatus).filter(HistoricoStatus.chamado_id == chamado_id).all():
+                db.delete(hist)
+            db.commit()
+            print(f"[CHAMADO_DELETE] ✓ Deletado histórico de status via ORM")
         except Exception as e:
-            print(f"[DEBUG] Erro ao deletar historico_status: {e}")
+            print(f"[CHAMADO_DELETE] Erro ao deletar histórico de status: {e}, tentando SQL...")
+            try:
+                db.execute(text("DELETE FROM historico_status WHERE chamado_id = :cid"), {"cid": chamado_id})
+                db.commit()
+                print(f"[CHAMADO_DELETE] ✓ Deletado histórico de status via SQL")
+            except Exception as e2:
+                print(f"[CHAMADO_DELETE] Aviso: Não foi possível deletar histórico de status: {e2}")
 
         try:
             db.execute(text("DELETE FROM historico_anexo WHERE chamado_id = :cid"), {"cid": chamado_id})
+            db.commit()
+            print(f"[CHAMADO_DELETE] ✓ Deletado histórico de anexo via SQL")
         except Exception as e:
-            print(f"[DEBUG] Erro ao deletar historico_anexo: {e}")
+            print(f"[CHAMADO_DELETE] Aviso: Não foi possível deletar histórico de anexo: {e}")
 
-        # Deletar o chamado
+        # Step 5: Deletar o chamado em si
+        print(f"[CHAMADO_DELETE] Deletando chamado {chamado_id}")
         db.delete(ch)
         db.commit()
+        print(f"[CHAMADO_DELETE] ✓ Chamado deletado com sucesso")
 
-        # Tentar criar notificação (não falha a requisição se falhar)
-        notification_id = None
+        # Step 6: Tentar criar notificação (não falha se houver erro)
         try:
+            print(f"[CHAMADO_DELETE] Criando notificação")
             Notification.__table__.create(bind=engine, checkfirst=True)
-            dados = json.dumps({
-                "id": chamado_id,
-                "codigo": codigo,
-                "protocolo": protocolo,
-            }, ensure_ascii=False)
             n = Notification(
                 tipo="chamado",
                 titulo=f"Chamado excluído: {codigo}",
@@ -645,48 +696,24 @@ def deletar_chamado(chamado_id: int, payload: ChamadoDeleteRequest, db: Session 
                 recurso="chamado",
                 recurso_id=chamado_id,
                 acao="excluido",
-                dados=dados,
+                dados=json.dumps({
+                    "id": chamado_id,
+                    "codigo": codigo,
+                    "protocolo": protocolo,
+                }, ensure_ascii=False),
             )
             db.add(n)
             db.commit()
-            db.refresh(n)
-            notification_id = n.id
+            print(f"[CHAMADO_DELETE] ✓ Notificação criada")
         except Exception as e:
-            print(f"[CHAMADO] Erro ao criar notificação: {e}")
-            try:
-                db.rollback()
-            except Exception:
-                pass
-
-        # Tentar emitir eventos Socket.IO de forma síncrona (não falha a requisição se falhar)
-        try:
-            # Broadcast via socketio sync method (thread-safe)
-            sio.emit("chamado:deleted", {"id": chamado_id}, skip_sid=None)
-        except Exception as e:
-            print(f"[CHAMADO] Erro ao emitir chamado:deleted: {e}")
-
-        if notification_id:
-            try:
-                sio.emit("notification:new", {
-                    "id": notification_id,
-                    "tipo": "chamado",
-                    "titulo": f"Chamado excluído: {codigo}",
-                    "mensagem": f"Chamado {protocolo} removido",
-                    "recurso": "chamado",
-                    "recurso_id": chamado_id,
-                    "acao": "excluido",
-                    "dados": json.dumps({"id": chamado_id, "codigo": codigo, "protocolo": protocolo}, ensure_ascii=False),
-                    "lido": False,
-                    "criado_em": now_brazil_naive().isoformat() if hasattr(now_brazil_naive(), 'isoformat') else None,
-                }, skip_sid=None)
-            except Exception as e:
-                print(f"[CHAMADO] Erro ao emitir notification:new: {e}")
+            print(f"[CHAMADO_DELETE] Aviso: Não foi possível criar notificação: {e}")
 
         return {"ok": True}
+
     except HTTPException:
         raise
     except Exception as e:
         import traceback
-        print(f"[CHAMADO] Erro ao excluir chamado {chamado_id}: {str(e)}")
+        print(f"[CHAMADO_DELETE] ✗ ERRO FATAL: {type(e).__name__}: {str(e)}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Erro ao excluir chamado: {str(e)}")
