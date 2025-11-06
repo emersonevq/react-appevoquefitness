@@ -126,8 +126,8 @@ export default function Index() {
     );
   };
 
-  const displayedSectors = sectors.filter(
-    (s) => ["ti", "compras", "manutencao", "portal-bi"].includes(s.slug)
+  const displayedSectors = sectors.filter((s) =>
+    ["ti", "compras", "manutencao", "portal-bi"].includes(s.slug),
   );
 
   return (

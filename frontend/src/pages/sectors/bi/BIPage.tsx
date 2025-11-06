@@ -60,7 +60,9 @@ export default function BIPage() {
       </section>
 
       <section className="container py-8 sm:py-12">
-        <h2 className="text-xl sm:text-2xl font-bold mb-6">Dashboards disponíveis</h2>
+        <h2 className="text-xl sm:text-2xl font-bold mb-6">
+          Dashboards disponíveis
+        </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {dashboards.map((dashboard) => (
             <Link
@@ -68,8 +70,12 @@ export default function BIPage() {
               to={`/setor/portal-bi/${dashboard.slug}`}
               className="card-surface group rounded-xl p-6 transition hover:shadow-lg hover:border-primary/50 focus:outline-none focus:ring-2 focus:ring-ring"
             >
-              <h3 className="font-semibold text-base mb-2">{dashboard.title}</h3>
-              <p className="text-sm text-muted-foreground">{dashboard.description}</p>
+              <h3 className="font-semibold text-base mb-2">
+                {dashboard.title}
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {dashboard.description}
+              </p>
               <div className="mt-4">
                 <Button size="sm" className="rounded-full">
                   Acessar
