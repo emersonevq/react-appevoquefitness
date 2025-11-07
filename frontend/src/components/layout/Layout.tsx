@@ -132,14 +132,21 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             to="/"
             className="flex items-center gap-2 font-extrabold tracking-tight"
           >
-            <img
-              src="https://images.totalpass.com/public/1280x720/czM6Ly90cC1pbWFnZS1hZG1pbi1wcm9kL2d5bXMva2g2OHF6OWNuajloN2lkdnhzcHhhdWx4emFhbWEzYnc3MGx5cDRzZ3p5aTlpZGM0OHRvYnk0YW56azRk"
-              alt="Evoque Fitness Logo"
-              className="h-6 w-auto rounded-sm shadow-sm"
-              loading="lazy"
-              decoding="async"
-            />
-            <span className="text-lg">Evoque Fitness</span>
+            {!location.pathname.startsWith("/setor/bi") ? (
+              <>
+                <img
+                  src="https://images.totalpass.com/public/1280x720/czM6Ly90cC1pbWFnZS1hZG1pbi1wcm9kL2d5bXMva2g2OHF6OWNuajloN2lkdnhzcHhhdWx4emFhbWEzYnc3MGx5cDRzZ3p5aTlpZGM0OHRvYnk0YW56azRk"
+                  alt="Evoque Fitness Logo"
+                  className="h-6 w-auto rounded-sm shadow-sm"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <span className="text-lg">Evoque Fitness</span>
+              </>
+            ) : (
+              // On BI page, keep header minimal and rely on sidebar logo
+              <span className="sr-only">Evoque Fitness</span>
+            )}
           </Link>
           {/* Desktop navigation */}
           <nav className="hidden md:flex items-center gap-2">
