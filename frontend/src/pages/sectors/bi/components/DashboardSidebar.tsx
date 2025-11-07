@@ -1,6 +1,14 @@
 import { Dashboard, DashboardCategory } from "../data/dashboards";
-import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import {
+  LayoutDashboard,
+  TrendingUp,
+  Users,
+  Target,
+  BarChart3,
+  PieChart,
+  Activity,
+  Zap,
+} from "lucide-react";
 
 interface DashboardSidebarProps {
   categories: DashboardCategory[];
@@ -8,64 +16,70 @@ interface DashboardSidebarProps {
   onSelectDashboard: (dashboard: Dashboard) => void;
 }
 
+// Mapeamento de ícones por título do dashboard
+const getDashboardIcon = (title: string) => {
+  const lowerTitle = title.toLowerCase();
+
+  if (lowerTitle.includes("visão geral") || lowerTitle.includes("overview")) {
+    return <LayoutDashboard className="w-full h-full" />;
+  }
+  if (lowerTitle.includes("vendas") || lowerTitle.includes("receita")) {
+    return <TrendingUp className="w-full h-full" />;
+  }
+  if (lowerTitle.includes("cliente") || lowerTitle.includes("member")) {
+    return <Users className="w-full h-full" />;
+  }
+  if (lowerTitle.includes("meta") || lowerTitle.includes("objetivo")) {
+    return <Target className="w-full h-full" />;
+  }
+  if (lowerTitle.includes("performance") || lowerTitle.includes("desempenho")) {
+    return <Activity className="w-full h-full" />;
+  }
+  if (lowerTitle.includes("análise") || lowerTitle.includes("analytics")) {
+    return <PieChart className="w-full h-full" />;
+  }
+  if (lowerTitle.includes("operacion")) {
+    return <Zap className="w-full h-full" />;
+  }
+
+  // Ícone padrão
+  return <BarChart3 className="w-full h-full" />;
+};
+
 export default function DashboardSidebar({
   categories,
   selectedDashboard,
   onSelectDashboard,
 }: DashboardSidebarProps) {
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(categories.map((c) => c.id)),
-  );
-
-  const toggleCategory = (categoryId: string) => {
-    const newExpanded = new Set(expandedCategories);
-    if (newExpanded.has(categoryId)) {
-      newExpanded.delete(categoryId);
-    } else {
-      newExpanded.add(categoryId);
-    }
-    setExpandedCategories(newExpanded);
-  };
+  const dashboards = categories.flatMap((c) => c.dashboards);
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col overflow-y-auto">
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="font-semibold text-sm text-gray-700">Dashboards</h2>
+    <aside className="bi-sidebar">
+      <div className="bi-sidebar-header">
+        <img
+          src="https://images.totalpass.com/public/1280x720/czM6Ly90cC1pbWFnZS1hZG1pbi1wcm9kL2d5bXMva2g2OHF6OWNuajloN2lkdnhzcHhhdWx4emFhbWEzYnc3MGx5cDRzZ3p5aTlpZGM0OHRvYnk0YW56azRk"
+          alt="Evoque"
+          className="bi-logo"
+        />
+        <h2 className="bi-sidebar-title">Dashboards</h2>
       </div>
 
-      <nav className="flex-1 px-2 py-4 space-y-2">
-        {categories.map((category) => (
-          <div key={category.id} className="space-y-1">
-            <button
-              onClick={() => toggleCategory(category.id)}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-100 transition text-sm font-medium text-gray-700"
-            >
-              <span>{category.name}</span>
-              <ChevronDown
-                className={`w-4 h-4 transition-transform ${
-                  expandedCategories.has(category.id) ? "rotate-180" : ""
-                }`}
-              />
-            </button>
-
-            {expandedCategories.has(category.id) && (
-              <div className="pl-4 space-y-1">
-                {category.dashboards.map((dashboard) => (
-                  <button
-                    key={dashboard.id}
-                    onClick={() => onSelectDashboard(dashboard)}
-                    className={`w-full text-left px-3 py-2 rounded-lg transition text-sm ${
-                      selectedDashboard?.id === dashboard.id
-                        ? "bg-primary/10 text-primary font-medium border border-primary/20"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    {dashboard.title}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+      <nav className="bi-nav" aria-label="Dashboards navigation">
+        {dashboards.map((dashboard) => (
+          <button
+            key={dashboard.id}
+            onClick={() => onSelectDashboard(dashboard)}
+            className={`bi-item ${
+              selectedDashboard?.id === dashboard.id ? "active" : ""
+            }`}
+            title={dashboard.title}
+            aria-current={selectedDashboard?.id === dashboard.id}
+          >
+            <span className="bi-item-icon">
+              {getDashboardIcon(dashboard.title)}
+            </span>
+            <span className="bi-item-label">{dashboard.title}</span>
+          </button>
         ))}
       </nav>
     </aside>

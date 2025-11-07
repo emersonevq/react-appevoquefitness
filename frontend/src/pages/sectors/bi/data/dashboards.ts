@@ -17,15 +17,15 @@ const TENANT_ID = "9f45f492-87a3-4214-862d-4c0d080aa136";
 
 export const dashboardsData: DashboardCategory[] = [
   {
-    id: "ti",
-    name: "TI",
+    id: "compras",
+    name: "Compras",
     dashboards: [
       {
         id: "analise-ocs",
         title: "Análise de OC's",
         description: "Análise detalhada de ordens de compra",
         reportId: "8799e0cf-fe55-4670-8a67-ceeee9744bc4",
-        category: "ti",
+        category: "compras",
         allowedUsers: ["André Santiago", "Matheus Domiciano", "Benwilson Jolo"],
       },
     ],
@@ -121,7 +121,8 @@ export const dashboardsData: DashboardCategory[] = [
 ];
 
 export function getPowerBIEmbedUrl(reportId: string): string {
-  return `https://app.powerbi.com/reportEmbed?reportId=${reportId}&autoAuth=true&ctid=${TENANT_ID}`;
+  // Ensure navigation and filter panes are available inside the embed so pages like "Capa" and "Análise" remain visible
+  return `https://app.powerbi.com/reportEmbed?reportId=${reportId}&autoAuth=true&ctid=${TENANT_ID}&navContentPaneEnabled=true&filterPaneEnabled=true`;
 }
 
 export function getAllDashboards(): Dashboard[] {

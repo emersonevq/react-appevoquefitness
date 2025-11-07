@@ -15,6 +15,7 @@ import ResetPasswordSuccess from "./pages/auth/ResetPasswordSuccess";
 import ChangePassword from "./pages/auth/ChangePassword";
 import AccessDenied from "./pages/AccessDenied";
 import SectorPage from "./pages/Sector";
+import BiPage from "./pages/sectors/bi/BiPage";
 import TiPage from "./pages/sectors/ti/TiPage";
 import {
   ComprasPage,
@@ -186,6 +187,14 @@ const App = () => (
               element={
                 <RequireLogin>
                   <OutrosServicosPage />
+                </RequireLogin>
+              }
+            />
+            <Route
+              path="/setor/bi"
+              element={
+                <RequireLogin>
+                  <BiPage />
                 </RequireLogin>
               }
             />
