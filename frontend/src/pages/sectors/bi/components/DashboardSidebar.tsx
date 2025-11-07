@@ -28,17 +28,22 @@ export default function DashboardSidebar({
   };
 
   return (
-    <aside className="w-64 bg-white border-r border-gray-200 flex flex-col overflow-y-auto">
-      <div className="p-4 border-b border-gray-200">
-        <h2 className="font-semibold text-sm text-gray-700">Dashboards</h2>
+    <aside className="bi-sidebar">
+      <div className="bi-sidebar-header">
+        <div className="bi-sidebar-logo" aria-hidden>
+          <svg width="28" height="20" viewBox="0 0 28 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="28" height="20" rx="3" fill="hsl(var(--sidebar-primary))" />
+          </svg>
+        </div>
+        <h2 className="bi-sidebar-title">Dashboards</h2>
       </div>
 
-      <nav className="flex-1 px-2 py-4 space-y-2">
+      <nav className="bi-nav" aria-label="Dashboards navigation">
         {categories.map((category) => (
-          <div key={category.id} className="space-y-1">
+          <div key={category.id} className="sidebar-group">
             <button
               onClick={() => toggleCategory(category.id)}
-              className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-100 transition text-sm font-medium text-gray-700"
+              className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-transparent transition text-sm font-medium text-[color:var(--sidebar-foreground)]"
             >
               <span>{category.name}</span>
               <ChevronDown
@@ -49,15 +54,13 @@ export default function DashboardSidebar({
             </button>
 
             {expandedCategories.has(category.id) && (
-              <div className="pl-4 space-y-1">
+              <div className="pl-2 space-y-1">
                 {category.dashboards.map((dashboard) => (
                   <button
                     key={dashboard.id}
                     onClick={() => onSelectDashboard(dashboard)}
-                    className={`w-full text-left px-3 py-2 rounded-lg transition text-sm ${
-                      selectedDashboard?.id === dashboard.id
-                        ? "bg-primary/10 text-primary font-medium border border-primary/20"
-                        : "text-gray-600 hover:bg-gray-100"
+                    className={`bi-item ${
+                      selectedDashboard?.id === dashboard.id ? "active" : ""
                     }`}
                   >
                     {dashboard.title}
