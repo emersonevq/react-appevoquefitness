@@ -3,7 +3,8 @@ import Layout from "@/components/layout/Layout";
 import DashboardViewer from "./components/DashboardViewer";
 import DashboardSidebar from "./components/DashboardSidebar";
 import DashboardGrid from "./components/DashboardGrid";
-import { dashboardsData, getAllDashboards, Dashboard } from "./data/dashboards";
+import { dashboardsData, getAllDashboards, Dashboard, getPowerBIEmbedUrl } from "./data/dashboards";
+import { useAuthContext } from "@/lib/auth-context";
 
 export default function BiPage() {
   console.log("[BiPage] Rendering BiPage component!");
