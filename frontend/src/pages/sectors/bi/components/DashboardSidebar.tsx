@@ -1,6 +1,4 @@
 import { Dashboard, DashboardCategory } from "../data/dashboards";
-import { ChevronDown } from "lucide-react";
-import { useState } from "react";
 
 interface DashboardSidebarProps {
   categories: DashboardCategory[];
@@ -13,7 +11,6 @@ export default function DashboardSidebar({
   selectedDashboard,
   onSelectDashboard,
 }: DashboardSidebarProps) {
-  // Flatten categories into a single dashboards array to match the screenshot
   const dashboards = categories.flatMap((c) => c.dashboards);
 
   return (
