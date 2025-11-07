@@ -18,14 +18,14 @@ export default function BiPage() {
   // Always render viewer layout (match requested design exactly)
   return (
     <Layout>
-      <div className="flex h-screen">
+      <div className="bi-page-root">
         <DashboardSidebar
           categories={dashboardsData}
           selectedDashboard={selectedDashboard}
           onSelectDashboard={handleSelectDashboard}
         />
 
-        <div className="flex-1 flex flex-col bg-[color:var(--background)]">
+        <main className="bi-content">
           <div className="px-6 py-3 border-b bg-transparent flex items-center gap-4">
             <div className="text-sm text-muted-foreground">☰</div>
             <h1 className="text-sm font-medium text-primary-foreground">
@@ -33,12 +33,12 @@ export default function BiPage() {
             </h1>
           </div>
 
-          <div className="flex-1 overflow-hidden">
+          <div className="bi-viewer-outer">
             {selectedDashboard && (
               <DashboardViewer dashboard={selectedDashboard} />
             )}
           </div>
-        </div>
+        </main>
       </div>
     </Layout>
   );
