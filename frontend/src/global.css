@@ -301,12 +301,14 @@
     height: 100%;
   }
   .bi-embed-card {
-    width: 100%;
-    height: calc(100vh - 6rem);
+    width: calc(100% - 2rem);
+    max-width: 1060px;
+    margin: 1.25rem auto;
+    height: calc(100vh - 9rem);
     background: hsl(0 0% 100%);
-    border-radius: 0.75rem;
-    padding: 1rem;
-    box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+    border-radius: 0.9rem;
+    padding: 1.25rem;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.18);
     border: 1px solid rgba(0,0,0,0.06);
     overflow: hidden;
   }
@@ -314,7 +316,31 @@
     width: 100%;
     height: 100%;
     border: 0;
-    border-radius: 0.5rem;
+    border-radius: 0.6rem;
     display: block;
+  }
+  .bi-logo {
+    height: 28px;
+    width: auto;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .bi-sidebar-header {
+    padding: 18px 16px;
+  }
+  .bi-item {
+    gap: 0.6rem;
+  }
+  .bi-item-icon {
+    opacity: 0.9;
+    width: 18px;
+    display: inline-block;
+    text-align: center;
+  }
+  .bi-item-label {
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
