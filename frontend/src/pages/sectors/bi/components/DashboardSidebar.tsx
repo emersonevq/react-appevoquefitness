@@ -11,8 +11,6 @@ export default function DashboardSidebar({
   selectedDashboard,
   onSelectDashboard,
 }: DashboardSidebarProps) {
-  const dashboards = categories.flatMap((c) => c.dashboards);
-
   return (
     <aside className="bi-sidebar">
       <div className="bi-sidebar-header">
@@ -25,18 +23,26 @@ export default function DashboardSidebar({
       </div>
 
       <nav className="bi-nav" aria-label="Dashboards navigation">
-        {dashboards.map((dashboard) => (
-          <button
-            key={dashboard.id}
-            onClick={() => onSelectDashboard(dashboard)}
-            className={`bi-item ${
-              selectedDashboard?.id === dashboard.id ? "active" : ""
-            }`}
-            title={dashboard.title}
-            aria-current={selectedDashboard?.id === dashboard.id}
-          >
-            <span className="bi-item-label">{dashboard.title}</span>
-          </button>
+        {categories.map((category) => (
+          <div className="bi-category" key={category.id}>
+            <div className="bi-category-title">{category.name}</div>
+            <ul className="bi-group-list" role="list">
+              {category.dashboards.map((dashboard) => (
+                <li key={dashboard.id}>
+                  <button
+                    onClick={() => onSelectDashboard(dashboard)}
+                    className={`bi-item ${
+                      selectedDashboard?.id === dashboard.id ? "active" : ""
+                    }`}
+                    title={dashboard.title}
+                    aria-current={selectedDashboard?.id === dashboard.id}
+                  >
+                    <span className="bi-item-label">{dashboard.title}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
       </nav>
     </aside>
