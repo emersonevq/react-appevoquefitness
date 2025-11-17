@@ -72,7 +72,7 @@ export default function LoginMediaPanel() {
     const handleSlideChange = () => {
       if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
 
-      const currentIndex = emblaApi.selectedIndex();
+      const currentIndex = emblaApi.selectedIndex;
       const currentItem = items[currentIndex];
 
       if (currentItem?.type === "video") {
