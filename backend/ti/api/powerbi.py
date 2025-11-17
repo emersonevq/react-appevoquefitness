@@ -39,7 +39,9 @@ POWERBI_API_URL = "https://api.powerbi.com/v1.0/myorg"
 
 async def get_service_principal_token() -> str:
     """Get access token using service principal credentials (Client Credentials Flow)"""
-    if not POWERBI_CLIENT_SECRET:
+    config = get_powerbi_config()
+
+    if not config["client_secret"]:
         raise HTTPException(
             status_code=400,
             detail="Power BI client secret not configured. Please add POWERBI_CLIENT_SECRET to environment variables. Failed to get Power BI token"
@@ -48,11 +50,11 @@ async def get_service_principal_token() -> str:
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                TOKEN_ENDPOINT,
+                get_token_endpoint(),
                 data={
                     "grant_type": "client_credentials",
-                    "client_id": POWERBI_CLIENT_ID,
-                    "client_secret": POWERBI_CLIENT_SECRET,
+                    "client_id": config["client_id"],
+                    "client_secret": config["client_secret"],
                     "scope": "https://analysis.windows.net/powerbi/api/.default",
                 },
             )
