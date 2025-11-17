@@ -66,38 +66,54 @@ export default function LoginMediaPanel() {
   useEffect(() => {
     if (!emblaApi) return;
 
-    const handleAutoplay = () => {
+    let currentVideoListener: (() => void) | null = null;
+
+    const setupSlideAutoplay = () => {
+      // Clean up previous listeners
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (currentVideoListener) currentVideoListener();
 
       const index = emblaApi.selectedIndex;
       const item = items[index];
 
       if (item?.type === "video") {
-        // For videos, wait for them to end
+        // For videos, wait for video to end
         const slides = emblaApi.containerNode().querySelectorAll(".embla__slide");
         const videoEl = slides[index]?.querySelector("video") as HTMLVideoElement | null;
 
         if (videoEl) {
-          const onVideoEnd = () => {
-            videoEl.removeEventListener("ended", onVideoEnd);
+          const handleVideoEnded = () => {
             emblaApi.scrollNext();
           };
-          videoEl.addEventListener("ended", onVideoEnd, { once: true });
+
+          // Remove any existing listeners first
+          videoEl.removeEventListener("ended", handleVideoEnded);
+          // Add listener with once: true
+          videoEl.addEventListener("ended", handleVideoEnded, { once: true });
+
+          // Store cleanup function
+          currentVideoListener = () => {
+            videoEl.removeEventListener("ended", handleVideoEnded);
+          };
         }
       } else {
-        // For images, advance every 6 seconds
+        // For images, schedule next slide after 6 seconds
         timeoutRef.current = setTimeout(() => {
           emblaApi.scrollNext();
         }, 6000);
       }
     };
 
-    handleAutoplay();
-    emblaApi.on("select", handleAutoplay);
+    // Setup initial slide
+    setupSlideAutoplay();
+
+    // Listen for slide changes
+    const unsubscribe = emblaApi.on("select", setupSlideAutoplay);
 
     return () => {
-      emblaApi.off("select", handleAutoplay);
+      unsubscribe();
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (currentVideoListener) currentVideoListener();
     };
   }, [emblaApi, items]);
 
