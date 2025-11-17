@@ -46,10 +46,11 @@ def login_media(db: Session = Depends(get_db)):
         q = db.query(Media).filter(Media.status == "ativo").order_by(Media.id.desc()).all()
         out = []
         for m in q:
+            media_type = "image" if m.tipo == "foto" else "video" if m.tipo == "video" else "image"
             out.append(
                 {
                     "id": m.id,
-                    "type": m.tipo if m.tipo != "foto" else "image" if m.tipo == "foto" else "video",
+                    "type": media_type,
                     "url": f"/api/login-media/{m.id}/download",
                     "title": m.titulo,
                     "description": m.descricao,
