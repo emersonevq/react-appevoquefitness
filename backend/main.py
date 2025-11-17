@@ -47,47 +47,61 @@ from core.db import get_db, engine
 from ti.models.media import Media
 
 
-@_http.get("/api/login-media/debug/all")
-def login_media_debug_all(db: Session = Depends(get_db)):
-    try:
-        all_media = db.query(Media).all()
-        return {
-            "total": len(all_media),
-            "items": [
-                {
-                    "id": m.id,
-                    "tipo": m.tipo,
-                    "titulo": m.titulo,
-                    "mime_type": m.mime_type,
-                    "tamanho_bytes": m.tamanho_bytes,
-                    "arquivo_blob_size": len(m.arquivo_blob) if m.arquivo_blob else 0,
-                    "status": m.status,
-                }
-                for m in all_media
-            ]
-        }
-    except Exception as e:
-        return {"erro": str(e)}
+@_http.post("/api/login-media/upload")
+async def upload_login_media(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    if not file:
+        raise HTTPException(status_code=400, detail="Arquivo ausente")
 
+    content_type = (file.content_type or "").lower()
+    print(f"[UPLOAD] Arquivo: {file.filename}, Content-Type: {content_type}")
 
-@_http.get("/api/login-media/debug/{item_id}")
-def login_media_debug(item_id: int, db: Session = Depends(get_db)):
+    if content_type.startswith("image/"):
+        kind = "foto"
+    elif content_type.startswith("video/"):
+        kind = "video"
+    else:
+        raise HTTPException(status_code=400, detail="Tipo de arquivo não suportado")
+
+    original_name = Path(file.filename or "arquivo").name
+    titulo = Path(original_name).stem or "mídia"
+
+    data = await file.read()
+    print(f"[UPLOAD] Tamanho do arquivo: {len(data)} bytes")
+
     try:
-        m = db.query(Media).filter(Media.id == int(item_id)).first()
-        if not m:
-            return {"erro": "Não encontrada", "id": item_id}
-        return {
+        m = Media(
+            tipo=kind,
+            titulo=titulo,
+            descricao=None,
+            arquivo_blob=data,
+            mime_type=content_type,
+            tamanho_bytes=len(data),
+            status="ativo",
+        )
+        db.add(m)
+        db.commit()
+        db.refresh(m)
+
+        print(f"[UPLOAD] Salvo com ID: {m.id}")
+
+        m.url = f"/api/login-media/{m.id}/download"
+        db.add(m)
+        db.commit()
+
+        media_type = "image" if kind == "foto" else "video"
+        result = {
             "id": m.id,
-            "tipo": m.tipo,
-            "titulo": m.titulo,
-            "mime_type": m.mime_type,
-            "tamanho_bytes": m.tamanho_bytes,
-            "arquivo_blob_size": len(m.arquivo_blob) if m.arquivo_blob else 0,
-            "arquivo_blob_type": type(m.arquivo_blob).__name__,
-            "status": m.status,
+            "type": media_type,
+            "url": f"/api/login-media/{m.id}/download",
+            "mime": m.mime_type,
         }
+        print(f"[UPLOAD] Resposta: {result}")
+        return result
     except Exception as e:
-        return {"erro": str(e)}
+        print(f"[UPLOAD] Falha ao salvar registro: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Falha ao salvar registro: {str(e)}")
 
 
 @_http.get("/api/login-media")
@@ -122,18 +136,23 @@ def login_media(db: Session = Depends(get_db)):
 @_http.get("/api/login-media/{item_id}/download")
 def download_login_media(item_id: int, db: Session = Depends(get_db)):
     try:
+        print(f"[DOWNLOAD] Requisição para ID: {item_id}")
         m = db.query(Media).filter(Media.id == int(item_id), Media.status == "ativo").first()
-        if not m or not m.arquivo_blob:
+        if not m:
+            print(f"[DOWNLOAD] Mídia não encontrada: {item_id}")
             raise HTTPException(status_code=404, detail="Mídia não encontrada")
+
+        if not m.arquivo_blob:
+            print(f"[DOWNLOAD] Arquivo vazio para ID: {item_id}")
+            raise HTTPException(status_code=404, detail="Arquivo vazio")
 
         filename = m.titulo or "media"
         data = m.arquivo_blob
 
-        if data is None:
-            raise HTTPException(status_code=404, detail="Arquivo vazio")
-
         if not isinstance(data, bytes):
             data = bytes(data)
+
+        print(f"[DOWNLOAD] Enviando {len(data)} bytes, tipo: {m.mime_type}")
 
         media_type = m.mime_type or "application/octet-stream"
 
@@ -149,7 +168,7 @@ def download_login_media(item_id: int, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Erro ao baixar mídia: {e}")
+        print(f"[DOWNLOAD] Erro ao baixar mídia: {e}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Erro ao baixar mídia: {str(e)}")
