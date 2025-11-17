@@ -69,58 +69,34 @@ export default function LoginMediaPanel() {
   useEffect(() => {
     if (!emblaApi) return;
 
-    const setupAutoplay = () => {
+    const onSlideSelect = () => {
       if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
 
       const currentIndex = emblaApi.selectedIndex;
       const currentItem = items[currentIndex];
 
-      // Get the current slide DOM element
-      const slideElements = emblaApi.containerNode().querySelectorAll(".embla__slide");
-      const currentSlide = slideElements[currentIndex] as HTMLElement | undefined;
-
-      if (!currentSlide) return;
-
       if (currentItem?.type === "video") {
-        // For videos, wait for the video element to finish
-        const videoElement = currentSlide.querySelector("video") as HTMLVideoElement | null;
+        // For videos, listen for when it ends
+        const slideElements = emblaApi.containerNode().querySelectorAll(".embla__slide");
+        const videoElement = slideElements[currentIndex]?.querySelector("video") as HTMLVideoElement | null;
 
-        if (videoElement && videoElement.readyState > 0) {
-          // Video is ready
-          const handleVideoEnd = () => {
-            videoElement.removeEventListener("ended", handleVideoEnd);
+        if (videoElement) {
+          const onEnded = () => {
+            videoElement.removeEventListener("ended", onEnded);
             emblaApi.scrollNext();
           };
-
-          videoElement.addEventListener("ended", handleVideoEnd, { once: true });
-
-          // Reset video to play from start
-          videoElement.currentTime = 0;
-          videoElement.play().catch(() => {
-            // If autoplay fails, move to next slide after timeout
-            timeoutRef.current = window.setTimeout(() => {
-              emblaApi.scrollNext();
-            }, 8000);
-          });
-        } else if (videoElement) {
-          // Wait for video to be ready
-          const handleCanPlay = () => {
-            videoElement.removeEventListener("canplay", handleCanPlay);
-            setupAutoplay();
-          };
-          videoElement.addEventListener("canplay", handleCanPlay, { once: true });
+          videoElement.addEventListener("ended", onEnded, { once: true });
         }
       } else {
-        // For images, use 6 second interval
+        // For images, advance after 6 seconds
         timeoutRef.current = window.setTimeout(() => {
           emblaApi.scrollNext();
         }, 6000);
       }
     };
 
-    setupAutoplay();
-
-    const unsubscribe = emblaApi.on("select", setupAutoplay);
+    onSlideSelect();
+    const unsubscribe = emblaApi.on("select", onSlideSelect);
 
     return () => {
       unsubscribe();
