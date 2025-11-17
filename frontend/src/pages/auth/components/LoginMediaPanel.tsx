@@ -102,13 +102,13 @@ export default function LoginMediaPanel() {
   }
 
   return (
-    <div className="relative overflow-hidden w-full h-full">
+    <div className="relative overflow-hidden w-full h-full rounded-xl">
       <div
         className="absolute inset-0 brand-gradient opacity-70"
         aria-hidden="true"
       />
-      <div className="relative h-full embla" ref={emblaRef}>
-        <div className="embla__container flex h-full">
+      <div className="relative w-full h-full embla" ref={emblaRef}>
+        <div className="embla__container flex w-full h-full">
           {items.map((item) => (
             <div
               key={item.id}
