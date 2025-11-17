@@ -79,12 +79,6 @@ async def upload_login_media(file: UploadFile = File(...), db: Session = Depends
     unique_name = f"{uuid.uuid4().hex[:12]}{ext}"
 
     data = await file.read()
-    try:
-        storage = get_storage()
-        blob_path = f"login-media/{unique_name}"
-        url = storage.upload_bytes(blob_path, data, content_type)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Falha no armazenamento: {e}")
 
     try:
         m = Media(
@@ -92,10 +86,10 @@ async def upload_login_media(file: UploadFile = File(...), db: Session = Depends
             title=None,
             description=None,
             filename=unique_name,
-            caminho_arquivo=url,
+            caminho_arquivo=f"/api/login-media/{uuid.uuid4().hex[:8]}/download",
             mime_type=content_type,
             tamanho_bytes=len(data),
-            conteudo=None,
+            conteudo=data,
             usuario_id=None,
             ativo=True,
         )
@@ -105,7 +99,7 @@ async def upload_login_media(file: UploadFile = File(...), db: Session = Depends
         return {
             "id": m.id,
             "type": m.media_type,
-            "url": m.caminho_arquivo,
+            "url": f"/api/login-media/{m.id}/download",
             "mime": m.mime_type,
         }
     except Exception as e:
