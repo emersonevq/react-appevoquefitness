@@ -45,10 +45,6 @@ def health_check(db: Session = Depends(get_db)):
         traceback.print_exc()
         return {"status": "error", "database": str(e)}, 500
 
-from sqlalchemy.orm import Session
-from core.db import get_db, engine
-from ti.models.media import Media
-
 
 @_http.get("/api/test-backend")
 def test_backend():
