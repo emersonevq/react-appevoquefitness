@@ -10,18 +10,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
 
 const sector = sectors.find((s) => s.slug === "ti")!;
@@ -42,30 +32,20 @@ export default function TiPage() {
     codigo: string;
     protocolo: string;
   } | null>(null);
-  const [open, setOpen] = useState(false);
   const [successOpen, setSuccessOpen] = useState(false);
-  const [unidades, setUnidades] = useState<
-    { id: number; nome: string; cidade: string }[]
-  >([]);
-  const [problemas, setProblemas] = useState<
-    { id: number; nome: string; prioridade: string; requer_internet: boolean }[]
-  >([]);
 
   useEffect(() => {
-    if (!open) return;
-    fetch(`${API_BASE}/unidades`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("fail"))))
-      .then((data) =>
-        Array.isArray(data) ? setUnidades(data) : setUnidades([]),
-      )
-      .catch(() => setUnidades([]));
-    fetch(`${API_BASE}/problemas`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("fail"))))
-      .then((data) =>
-        Array.isArray(data) ? setProblemas(data) : setProblemas([]),
-      )
-      .catch(() => setProblemas([]));
-  }, [open]);
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("chamado_criado")) {
+      const codigo = params.get("codigo");
+      const protocolo = params.get("protocolo");
+      if (codigo && protocolo) {
+        setLastCreated({ codigo, protocolo });
+        setSuccessOpen(true);
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+  }, []);
 
   return (
     <Layout>
@@ -122,80 +102,9 @@ export default function TiPage() {
               </div>
             ) : null;
           })()}
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button className="rounded-full">Abrir novo chamado</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-xl">
-              <DialogHeader>
-                <DialogTitle>Abrir chamado</DialogTitle>
-              </DialogHeader>
-              <TicketForm
-                problemas={problemas}
-                unidades={unidades}
-                onSubmit={async (payload) => {
-                  try {
-                    const fd = new FormData();
-                    fd.set("solicitante", payload.nome);
-                    fd.set("cargo", payload.cargo);
-                    fd.set("email", payload.email);
-                    fd.set("telefone", payload.telefone);
-                    fd.set("unidade", payload.unidade);
-                    fd.set("problema", payload.problema);
-                    if (payload.internetItem)
-                      fd.set("internetItem", payload.internetItem);
-                    if (payload.descricao)
-                      fd.set("descricao", payload.descricao);
-                    if (payload.files && payload.files.length > 0) {
-                      for (const f of payload.files) fd.append("files", f);
-                    }
-                    const res = await apiFetch("/chamados/with-attachments", {
-                      method: "POST",
-                      body: fd,
-                    });
-                    if (!res.ok) throw new Error("Falha ao criar chamado");
-                    const created: {
-                      id: number;
-                      codigo: string;
-                      protocolo: string;
-                      data_abertura: string;
-                      problema: string;
-                      internet_item?: string | null;
-                      status: string;
-                    } = await res.json();
-
-                    const problemaFmt =
-                      created.problema === "Internet" && created.internet_item
-                        ? `Internet - ${created.internet_item}`
-                        : created.problema;
-
-                    setTickets((prev) => [
-                      {
-                        id: String(created.id),
-                        codigo: created.codigo,
-                        protocolo: created.protocolo,
-                        data:
-                          created.data_abertura?.slice(0, 10) ||
-                          new Date().toISOString().slice(0, 10),
-                        problema: problemaFmt,
-                        status: created.status,
-                      },
-                      ...prev,
-                    ]);
-                    setLastCreated({
-                      codigo: created.codigo,
-                      protocolo: created.protocolo,
-                    });
-                    setOpen(false);
-                    setSuccessOpen(true);
-                  } catch (e) {
-                    console.error(e);
-                    alert("Não foi possível abrir o chamado. Tente novamente.");
-                  }
-                }}
-              />
-            </DialogContent>
-          </Dialog>
+          <Button asChild className="rounded-full">
+            <Link to="/setor/ti/chamados/abrir">Abrir novo chamado</Link>
+          </Button>
         </div>
 
         <div className="mt-4 overflow-x-auto rounded-xl border border-border/60 bg-card">
