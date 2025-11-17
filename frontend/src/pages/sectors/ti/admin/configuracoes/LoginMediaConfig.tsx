@@ -110,11 +110,13 @@ export default function LoginMediaConfig() {
                 />
               ) : it.type === "video" && it.url ? (
                 <video
-                  src={it.url}
                   className="w-full h-full object-cover"
                   muted
                   controls
-                />
+                  preload="metadata"
+                >
+                  <source src={it.url} type={it.mime || "video/mp4"} />
+                </video>
               ) : (
                 <div className="p-4 text-sm text-muted-foreground">
                   {it.title || "Mensagem"}
