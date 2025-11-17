@@ -31,6 +31,17 @@ _http.add_middleware(
 def ping():
     return {"message": "pong"}
 
+@_http.get("/api/health")
+def health_check(db: Session = Depends(get_db)):
+    try:
+        db.execute("SELECT 1")
+        return {"status": "ok", "database": "connected"}
+    except Exception as e:
+        print(f"Database health check failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"status": "error", "database": str(e)}, 500
+
 from sqlalchemy.orm import Session
 from core.db import get_db, engine
 from ti.models.media import Media
