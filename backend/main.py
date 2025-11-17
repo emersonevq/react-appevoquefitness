@@ -82,16 +82,24 @@ def download_login_media(item_id: int, db: Session = Depends(get_db)):
         m = db.query(Media).filter(Media.id == int(item_id), Media.status == "ativo").first()
         if not m or not m.arquivo_blob:
             raise HTTPException(status_code=404, detail="Mídia não encontrada")
-        filename = m.titulo or "media"
 
-        def generate_chunks():
+        filename = m.titulo or "media"
+        data = m.arquivo_blob
+
+        if not isinstance(data, bytes):
+            data = bytes(data)
+
+        def generate_chunks(blob_data):
             chunk_size = 262144
-            data = m.arquivo_blob
-            for i in range(0, len(data), chunk_size):
-                yield data[i:i + chunk_size]
+            try:
+                for i in range(0, len(blob_data), chunk_size):
+                    yield blob_data[i:i + chunk_size]
+            except Exception as chunk_err:
+                print(f"Erro ao gerar chunk: {chunk_err}")
+                raise
 
         return StreamingResponse(
-            generate_chunks(),
+            generate_chunks(data),
             media_type=m.mime_type or "application/octet-stream",
             headers={
                 "Content-Disposition": f"inline; filename={filename}",
@@ -102,7 +110,10 @@ def download_login_media(item_id: int, db: Session = Depends(get_db)):
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao baixar mídia: {e}")
+        print(f"Erro ao baixar mídia: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erro ao baixar mídia: {str(e)}")
 
 
 @_http.post("/api/login-media/upload")
