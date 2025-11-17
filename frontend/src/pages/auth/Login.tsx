@@ -36,16 +36,23 @@ export default function Login() {
   };
 
   return (
-    <div className="relative h-screen w-screen flex flex-col md:flex-row bg-background overflow-hidden">
+    <div className="relative min-h-screen w-screen flex flex-col md:flex-row bg-background">
       <div className="absolute inset-0 login-backdrop pointer-events-none -z-10" />
 
       {/* Brand/Media side (desktop) - larger, full height */}
-      <div className="hidden md:flex md:flex-1 md:flex-[2] items-center justify-center w-full h-full">
+      <div className="hidden md:flex md:flex-[2] items-center justify-center w-full h-screen">
         <LoginMediaPanel />
       </div>
 
       {/* Form side */}
-      <div className="flex items-center justify-center flex-1 p-4 sm:p-6 md:p-8 w-full h-full md:flex-[1] overflow-auto">
+      <div className="flex flex-col items-center justify-center md:flex-[1] w-full p-4 sm:p-6 md:p-8">
+        {/* Mobile media panel */}
+        <div className="md:hidden w-full max-w-sm mb-6">
+          <div className="rounded-xl overflow-hidden aspect-square">
+            <LoginMediaPanel />
+          </div>
+        </div>
+
         <div className="w-full sm:max-w-sm">
           <div className="card-surface rounded-xl p-6 sm:p-8 w-full flex flex-col justify-center">
             <h2 className="text-xl font-semibold">Entrar</h2>
