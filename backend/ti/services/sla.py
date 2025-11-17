@@ -110,6 +110,75 @@ class SLACalculator:
             return None
 
     @staticmethod
+    def get_first_response_date(db: Session, chamado_id: int) -> datetime | None:
+        """
+        Obtém a data da primeira resposta (primeira transição para 'Em Atendimento' ou 'Em análise').
+        Procura no histórico de status.
+        """
+        try:
+            historico = db.query(HistoricoStatus).filter(
+                and_(
+                    HistoricoStatus.chamado_id == chamado_id,
+                    HistoricoStatus.status_novo.in_(["Em Atendimento", "Em análise"])
+                )
+            ).order_by(HistoricoStatus.data_acao.asc()).first()
+
+            if historico and historico.data_acao:
+                return historico.data_acao
+        except Exception:
+            pass
+        return None
+
+    @staticmethod
+    def get_completion_date(db: Session, chamado_id: int) -> datetime | None:
+        """
+        Obtém a data de conclusão (primeira transição para 'Concluído').
+        Procura no histórico de status.
+        """
+        try:
+            historico = db.query(HistoricoStatus).filter(
+                and_(
+                    HistoricoStatus.chamado_id == chamado_id,
+                    HistoricoStatus.status_novo.in_(["Concluído", "Concluido"])
+                )
+            ).order_by(HistoricoStatus.data_acao.asc()).first()
+
+            if historico and historico.data_acao:
+                return historico.data_acao
+        except Exception:
+            pass
+        return None
+
+    @staticmethod
+    def is_frozen(db: Session, chamado_id: int, agora: datetime | None = None) -> bool:
+        """
+        Verifica se o chamado está congelado (em 'Aguardando' há muito tempo).
+        Um chamado é considerado congelado se o último status é 'Aguardando'
+        e não houve mudança nos últimos 24 horas comerciais.
+        """
+        if agora is None:
+            agora = now_brazil_naive()
+
+        try:
+            # Pega o último status registrado
+            ultimo_status = db.query(HistoricoStatus).filter(
+                HistoricoStatus.chamado_id == chamado_id
+            ).order_by(HistoricoStatus.data_acao.desc()).first()
+
+            if not ultimo_status or ultimo_status.status_novo != "Aguardando":
+                return False
+
+            # Se está em Aguardando e a última mudança foi há mais de 24h, é congelado
+            if ultimo_status.data_acao:
+                tempo_congelado = SLACalculator.calculate_business_hours(ultimo_status.data_acao, agora, db)
+                return tempo_congelado > 24.0
+
+        except Exception:
+            pass
+
+        return False
+
+    @staticmethod
     def get_sla_status(db: Session, chamado: Chamado) -> dict:
         sla_config = SLACalculator.get_sla_config_by_priority(db, chamado.prioridade)
 
