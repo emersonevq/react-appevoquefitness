@@ -9,6 +9,7 @@ interface MediaItem {
   title?: string;
   description?: string;
   alt?: string;
+  mime?: string;
 }
 
 export default function LoginMediaConfig() {
