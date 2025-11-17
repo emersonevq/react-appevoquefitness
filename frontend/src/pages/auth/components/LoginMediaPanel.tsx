@@ -53,6 +53,8 @@ export default function LoginMediaPanel() {
     skipSnaps: false,
   });
   const autoplayRef = useRef<number | null>(null);
+  const timeoutRef = useRef<number | null>(null);
+  const currentIndexRef = useRef<number>(0);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -66,18 +68,50 @@ export default function LoginMediaPanel() {
     return () => ac.abort();
   }, []);
 
+  const scheduleNextSlide = () => {
+    if (!emblaApi) return;
+    if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
+
+    const currentIndex = emblaApi.selectedIndex();
+    currentIndexRef.current = currentIndex;
+    const currentItem = items[currentIndex];
+
+    if (currentItem?.type === "video") {
+      // For videos, wait for the video to end
+      const slideElements = emblaApi.containerNode().querySelectorAll(".embla__slide");
+      const currentSlide = slideElements[currentIndex];
+      const videoElement = currentSlide?.querySelector("video");
+
+      if (videoElement) {
+        const handleVideoEnd = () => {
+          videoElement.removeEventListener("ended", handleVideoEnd);
+          emblaApi.scrollNext();
+          scheduleNextSlide();
+        };
+        videoElement.addEventListener("ended", handleVideoEnd);
+      } else {
+        // Fallback if video element not found
+        timeoutRef.current = window.setTimeout(() => {
+          emblaApi.scrollNext();
+          scheduleNextSlide();
+        }, 6000);
+      }
+    } else {
+      // For images, use 6 second interval
+      timeoutRef.current = window.setTimeout(() => {
+        emblaApi.scrollNext();
+        scheduleNextSlide();
+      }, 6000);
+    }
+  };
+
   useEffect(() => {
     if (!emblaApi) return;
-    if (autoplayRef.current) window.clearInterval(autoplayRef.current);
-    autoplayRef.current = window.setInterval(() => {
-      try {
-        (emblaApi as EmblaCarouselType).scrollNext();
-      } catch {}
-    }, 6000);
+    scheduleNextSlide();
     return () => {
-      if (autoplayRef.current) window.clearInterval(autoplayRef.current);
+      if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
     };
-  }, [emblaApi, items.length]);
+  }, [emblaApi, items]);
 
   const showFallback = !items || items.length === 0 || error;
 
