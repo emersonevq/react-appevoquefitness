@@ -1,11 +1,13 @@
 from __future__ import annotations
 import json
+import os
 import secrets
 import string
 from sqlalchemy.orm import Session
 from werkzeug.security import generate_password_hash
 from ti.models import User
 from core.db import engine
+from core.utils import now_brazil_naive
 from ti.schemas.user import UserCreate, UserCreatedOut, UserAvailability
 
 
