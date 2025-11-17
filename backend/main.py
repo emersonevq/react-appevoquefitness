@@ -86,37 +86,35 @@ async def upload_login_media(file: UploadFile = File(...), db: Session = Depends
         raise HTTPException(status_code=400, detail="Arquivo ausente")
     content_type = (file.content_type or "").lower()
     if content_type.startswith("image/"):
-        kind = "image"
+        kind = "foto"
     elif content_type.startswith("video/"):
         kind = "video"
     else:
         raise HTTPException(status_code=400, detail="Tipo de arquivo não suportado")
 
     original_name = Path(file.filename or "arquivo").name
-    ext = Path(original_name).suffix or ""
-    unique_name = f"{uuid.uuid4().hex[:12]}{ext}"
+    titulo = Path(original_name).stem or "mídia"
 
     data = await file.read()
 
     try:
         m = Media(
-            media_type=kind,
-            title=None,
-            description=None,
-            filename=unique_name,
-            caminho_arquivo=f"/api/login-media/{uuid.uuid4().hex[:8]}/download",
+            tipo=kind,
+            titulo=titulo,
+            descricao=None,
+            url=f"/api/login-media/{uuid.uuid4().hex[:8]}/download",
+            arquivo_blob=data,
             mime_type=content_type,
             tamanho_bytes=len(data),
-            conteudo=data,
-            usuario_id=None,
-            ativo=True,
+            status="ativo",
         )
         db.add(m)
         db.commit()
         db.refresh(m)
+        media_type = "image" if kind == "foto" else "video"
         return {
             "id": m.id,
-            "type": m.media_type,
+            "type": media_type,
             "url": f"/api/login-media/{m.id}/download",
             "mime": m.mime_type,
         }
