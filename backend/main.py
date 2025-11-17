@@ -47,6 +47,26 @@ from core.db import get_db, engine
 from ti.models.media import Media
 
 
+@_http.get("/api/login-media/debug/{item_id}")
+def login_media_debug(item_id: int, db: Session = Depends(get_db)):
+    try:
+        m = db.query(Media).filter(Media.id == int(item_id)).first()
+        if not m:
+            return {"erro": "Não encontrada"}
+        return {
+            "id": m.id,
+            "tipo": m.tipo,
+            "titulo": m.titulo,
+            "mime_type": m.mime_type,
+            "tamanho_bytes": m.tamanho_bytes,
+            "arquivo_blob_size": len(m.arquivo_blob) if m.arquivo_blob else 0,
+            "arquivo_blob_type": type(m.arquivo_blob).__name__,
+            "status": m.status,
+        }
+    except Exception as e:
+        return {"erro": str(e)}
+
+
 @_http.get("/api/login-media")
 def login_media(db: Session = Depends(get_db)):
     try:
