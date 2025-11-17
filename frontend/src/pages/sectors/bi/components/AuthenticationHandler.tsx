@@ -42,7 +42,8 @@ export default function AuthenticationHandler({
           const data = await response.json();
           if (
             data.detail &&
-            (data.detail.includes("client secret") || data.detail.includes("Failed to get"))
+            (data.detail.includes("client secret") ||
+              data.detail.includes("Failed to get"))
           ) {
             if (isMounted) {
               setStatus("success");

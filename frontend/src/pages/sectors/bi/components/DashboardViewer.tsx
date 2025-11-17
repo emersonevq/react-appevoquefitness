@@ -25,7 +25,8 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
     const animationEnd = Date.now() + duration;
     const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
 
-    const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
+    const randomInRange = (min: number, max: number) =>
+      Math.random() * (max - min) + min;
 
     const interval: NodeJS.Timeout = setInterval(() => {
       const timeLeft = animationEnd - Date.now();
@@ -61,7 +62,9 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
         );
 
         if (!tokenResponse.ok) {
-          throw new Error(`Falha ao obter token de embed: ${tokenResponse.status}`);
+          throw new Error(
+            `Falha ao obter token de embed: ${tokenResponse.status}`,
+          );
         }
 
         const tokenData = await tokenResponse.json();
@@ -128,7 +131,9 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
         console.error("Error embedding report:", error);
         if (isMounted) {
           setEmbedError(
-            error instanceof Error ? error.message : "Erro ao carregar dashboard",
+            error instanceof Error
+              ? error.message
+              : "Erro ao carregar dashboard",
           );
           setIsLoading(false);
           setIsAuthenticating(false);
