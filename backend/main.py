@@ -10,6 +10,9 @@ from core.realtime import mount_socketio
 import json
 from typing import Any, List, Dict
 import uuid
+from sqlalchemy.orm import Session
+from core.db import get_db, engine
+from ti.models.media import Media
 
 # Create the FastAPI application (HTTP)
 _http = FastAPI(title="Evoque API - TI", version="1.0.0")
