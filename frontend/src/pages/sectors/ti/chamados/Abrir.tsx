@@ -121,7 +121,8 @@ export default function AbrirChamadoPage() {
               Abrir novo chamado
             </h1>
             <p className="mt-2 text-primary-foreground/90 max-w-2xl">
-              Preencha o formulário abaixo para criar um novo chamado de suporte técnico.
+              Preencha o formulário abaixo para criar um novo chamado de suporte
+              técnico.
             </p>
           </div>
         </div>
@@ -130,7 +131,9 @@ export default function AbrirChamadoPage() {
       <section className="container py-8">
         <div className="max-w-2xl mx-auto">
           <div className="rounded-lg border border-border/60 bg-card p-6 sm:p-8">
-            <h2 className="text-xl font-semibold mb-6">Informações do chamado</h2>
+            <h2 className="text-xl font-semibold mb-6">
+              Informações do chamado
+            </h2>
             <TicketForm
               problemas={problemas}
               unidades={unidades}
