@@ -172,7 +172,6 @@ function Slide({ item }: { item: MediaItem }) {
           className="w-full h-full object-cover login-media"
           autoPlay
           muted
-          loop
           playsInline
           controls={false}
           preload="metadata"
