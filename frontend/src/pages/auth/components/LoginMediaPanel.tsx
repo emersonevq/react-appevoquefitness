@@ -37,6 +37,7 @@ export default function LoginMediaPanel() {
   ];
 
   const [items, setItems] = useState<MediaItem[]>(defaultItems);
+  const [loadedVideos, setLoadedVideos] = useState<Set<string | number>>(new Set());
   const [emblaRef, emblaApi] = useEmblaCarousel({
     loop: true,
     align: "center",
@@ -49,7 +50,10 @@ export default function LoginMediaPanel() {
   useEffect(() => {
     const controller = new AbortController();
     fetchLoginMedia(controller.signal).then((list) => {
-      if (list.length > 0) setItems(list);
+      if (list.length > 0) {
+        console.log("Media loaded:", list);
+        setItems(list);
+      }
     });
     return () => controller.abort();
   }, []);
@@ -58,9 +62,12 @@ export default function LoginMediaPanel() {
     if (!emblaApi) return;
 
     const onSelect = () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
 
-      const idx = emblaApi.selectedIndex;
+      const idx = emblaApi.selectedScrollSnap();
       const item = items[idx];
 
       // Clean up old listeners
@@ -68,30 +75,56 @@ export default function LoginMediaPanel() {
       videoListenersRef.current.clear();
 
       if (item?.type === "video") {
-        const slides = emblaApi.containerNode()?.querySelectorAll(".embla__slide");
-        const video = slides?.[idx]?.querySelector("video") as HTMLVideoElement | null;
+        const slides = emblaApi.slideNodes();
+        const video = slides[idx]?.querySelector("video") as HTMLVideoElement | null;
 
         if (video) {
-          const handleEnd = () => emblaApi.scrollNext();
-          video.addEventListener("ended", handleEnd, { once: true });
+          // Reset and play video
+          video.currentTime = 0;
+          const playPromise = video.play();
+          
+          if (playPromise !== undefined) {
+            playPromise.catch((error) => {
+              console.error("Video play failed:", error);
+              // If autoplay fails, skip to next after 6 seconds
+              timeoutRef.current = setTimeout(() => emblaApi.scrollNext(), 6000);
+            });
+          }
+
+          const handleEnd = () => {
+            console.log("Video ended, moving to next");
+            emblaApi.scrollNext();
+          };
+          
+          video.addEventListener("ended", handleEnd);
           videoListenersRef.current.set(idx, () =>
             video.removeEventListener("ended", handleEnd)
           );
         }
       } else {
+        // Image: auto-advance after 6 seconds
         timeoutRef.current = setTimeout(() => emblaApi.scrollNext(), 6000);
       }
     };
 
     onSelect();
-    const unsub = emblaApi.on("select", onSelect);
+    emblaApi.on("select", onSelect);
 
     return () => {
-      unsub();
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       videoListenersRef.current.forEach((cleanup) => cleanup());
+      videoListenersRef.current.clear();
     };
   }, [emblaApi, items]);
+
+  const handleVideoLoaded = (itemId: string | number) => {
+    setLoadedVideos((prev) => new Set(prev).add(itemId));
+    console.log("Video loaded:", itemId);
+  };
+
+  const handleVideoError = (itemId: string | number, error: any) => {
+    console.error("Video error for item", itemId, error);
+  };
 
   return (
     <div className="relative overflow-hidden rounded-2xl mx-auto w-[360px] h-[360px] sm:w-[460px] sm:h-[460px] md:w-[520px] md:h-[520px] lg:w-[560px] lg:h-[560px] xl:w-[640px] xl:h-[640px]">
@@ -101,24 +134,41 @@ export default function LoginMediaPanel() {
           {items.map((item) => (
             <div
               key={item.id}
-              className="embla__slide min-w-0 flex-[0_0_100%] h-full"
+              className="embla__slide min-w-0 flex-[0_0_100%] h-full relative"
             >
               {item.type === "image" ? (
                 <img
                   src={item.url}
                   alt="Media"
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    console.error("Image load error:", item.id);
+                    // Fallback to placeholder if image fails
+                    e.currentTarget.src = defaultItems[0].url || "";
+                  }}
                 />
               ) : (
-                <video
-                  className="w-full h-full object-cover"
-                  autoPlay
-                  muted
-                  playsInline
-                  controls={false}
-                >
-                  <source src={item.url} type={item.mime || "video/mp4"} />
-                </video>
+                <>
+                  <video
+                    key={item.id}
+                    className="w-full h-full object-cover"
+                    muted
+                    playsInline
+                    preload="auto"
+                    onLoadedData={() => handleVideoLoaded(item.id)}
+                    onError={(e) => handleVideoError(item.id, e)}
+                  >
+                    <source src={item.url} type={item.mime || "video/mp4"} />
+                    Your browser does not support the video tag.
+                  </video>
+                  
+                  {/* Loading indicator for videos */}
+                  {!loadedVideos.has(item.id) && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                      <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                    </div>
+                  )}
+                </>
               )}
             </div>
           ))}
