@@ -75,14 +75,6 @@ const App = () => (
             element={<ResetPasswordSuccess />}
           />
           <Route
-            path="/setor/ti"
-            element={
-              <RequireLogin>
-                <TiPage />
-              </RequireLogin>
-            }
-          />
-          <Route
             path="/setor/ti/chamados/abrir"
             element={
               <RequireLogin>
@@ -135,6 +127,14 @@ const App = () => (
               <Route path="acoes" element={<ConfAcoes />} />
             </Route>
           </Route>
+          <Route
+            path="/setor/ti"
+            element={
+              <RequireLogin>
+                <TiPage />
+              </RequireLogin>
+            }
+          />
           <Route
             path="/setor/compras"
             element={
