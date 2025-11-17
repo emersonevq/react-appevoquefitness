@@ -1,6 +1,6 @@
 from __future__ import annotations
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from fastapi.middleware.cors import CORSMiddleware
@@ -10,6 +10,9 @@ from core.realtime import mount_socketio
 import json
 from typing import Any, List, Dict
 import uuid
+from sqlalchemy.orm import Session
+from core.db import get_db, engine
+from ti.models.media import Media
 
 # Create the FastAPI application (HTTP)
 _http = FastAPI(title="Evoque API - TI", version="1.0.0")
@@ -42,9 +45,95 @@ def health_check(db: Session = Depends(get_db)):
         traceback.print_exc()
         return {"status": "error", "database": str(e)}, 500
 
-from sqlalchemy.orm import Session
-from core.db import get_db, engine
-from ti.models.media import Media
+
+@_http.get("/api/test-backend")
+def test_backend():
+    """Simples teste para confirmar que o backend foi reiniciado"""
+    return {"status": "Backend está rodando com o código atualizado!", "timestamp": "OK"}
+
+
+@_http.post("/api/login-media/upload")
+async def upload_login_media(file: UploadFile = File(...), db: Session = Depends(get_db)):
+    if not file:
+        raise HTTPException(status_code=400, detail="Arquivo ausente")
+
+    content_type = (file.content_type or "").lower()
+    print(f"[UPLOAD] Arquivo: {file.filename}, Content-Type: {content_type}")
+
+    if content_type.startswith("image/"):
+        kind = "foto"
+    elif content_type.startswith("video/"):
+        kind = "video"
+    else:
+        raise HTTPException(status_code=400, detail="Tipo de arquivo não suportado")
+
+    original_name = Path(file.filename or "arquivo").name
+    titulo = Path(original_name).stem or "mídia"
+
+    data = await file.read()
+    print(f"[UPLOAD] Tamanho do arquivo: {len(data)} bytes")
+
+    try:
+        m = Media(
+            tipo=kind,
+            titulo=titulo,
+            descricao=None,
+            arquivo_blob=data,
+            mime_type=content_type,
+            tamanho_bytes=len(data),
+            status="ativo",
+        )
+        db.add(m)
+        db.commit()
+        db.refresh(m)
+
+        print(f"[UPLOAD] Salvo com ID: {m.id}")
+
+        m.url = f"/api/login-media/{m.id}/download"
+        db.add(m)
+        db.commit()
+
+        media_type = "image" if kind == "foto" else "video"
+        result = {
+            "id": m.id,
+            "type": media_type,
+            "url": f"/api/login-media/{m.id}/download",
+            "mime": m.mime_type,
+        }
+        print(f"[UPLOAD] Resposta: {result}")
+        return result
+    except Exception as e:
+        print(f"[UPLOAD] Falha ao salvar registro: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Falha ao salvar registro: {str(e)}")
+
+
+@_http.get("/api/login-media/debug/all")
+def login_media_debug_all(db: Session = Depends(get_db)):
+    """Lista TODOS os vídeos (ativo e inativo) para debug"""
+    try:
+        all_media = db.query(Media).all()
+        return {
+            "total": len(all_media),
+            "items": [
+                {
+                    "id": m.id,
+                    "tipo": m.tipo,
+                    "titulo": m.titulo,
+                    "mime_type": m.mime_type,
+                    "tamanho_bytes": m.tamanho_bytes,
+                    "arquivo_blob_size": len(m.arquivo_blob) if m.arquivo_blob else 0,
+                    "status": m.status,
+                }
+                for m in all_media
+            ]
+        }
+    except Exception as e:
+        print(f"[DEBUG_ALL] Erro: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"erro": str(e)}
 
 
 @_http.get("/api/login-media")
@@ -78,65 +167,65 @@ def login_media(db: Session = Depends(get_db)):
 
 @_http.get("/api/login-media/{item_id}/download")
 def download_login_media(item_id: int, db: Session = Depends(get_db)):
+    print(f"\n[DL] ==== START ID:{item_id} ====")
     try:
-        m = db.query(Media).filter(Media.id == int(item_id), Media.status == "ativo").first()
-        if not m or not m.arquivo_blob:
-            raise HTTPException(status_code=404, detail="Mídia não encontrada")
-        filename = m.titulo or "media"
-        return StreamingResponse(
-            iter([m.arquivo_blob]),
-            media_type=m.mime_type or "application/octet-stream",
-            headers={"Content-Disposition": f"inline; filename={filename}"}
+        m = db.query(Media).filter(Media.id == int(item_id)).first()
+        print(f"[DL] Query result: {m is not None}")
+
+        if not m:
+            print(f"[DL] Not found")
+            raise HTTPException(status_code=404, detail="Not found")
+
+        print(f"[DL] Type:{m.tipo} Status:{m.status} Title:{m.titulo}")
+
+        blob = m.arquivo_blob
+        print(f"[DL] Blob type: {type(blob).__name__} Size: {len(blob) if blob else 0}")
+
+        if not blob:
+            raise HTTPException(status_code=404, detail="No data")
+
+        mime = m.mime_type or "application/octet-stream"
+        name = (m.titulo or "media").replace(" ", "_")
+
+        print(f"[DL] Returning: {len(blob)} bytes as {mime}")
+        print(f"[DL] ==== END ====\n")
+
+        return Response(
+            content=blob,
+            media_type=mime,
+            headers={"Content-Disposition": f"inline; filename={name}"}
         )
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao baixar mídia: {e}")
-
-
-@_http.post("/api/login-media/upload")
-async def upload_login_media(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    if not file:
-        raise HTTPException(status_code=400, detail="Arquivo ausente")
-    content_type = (file.content_type or "").lower()
-    if content_type.startswith("image/"):
-        kind = "foto"
-    elif content_type.startswith("video/"):
-        kind = "video"
-    else:
-        raise HTTPException(status_code=400, detail="Tipo de arquivo não suportado")
-
-    original_name = Path(file.filename or "arquivo").name
-    titulo = Path(original_name).stem or "mídia"
-
-    data = await file.read()
-
-    try:
-        m = Media(
-            tipo=kind,
-            titulo=titulo,
-            descricao=None,
-            url=f"/api/login-media/{uuid.uuid4().hex[:8]}/download",
-            arquivo_blob=data,
-            mime_type=content_type,
-            tamanho_bytes=len(data),
-            status="ativo",
-        )
-        db.add(m)
-        db.commit()
-        db.refresh(m)
-        media_type = "image" if kind == "foto" else "video"
-        return {
-            "id": m.id,
-            "type": media_type,
-            "url": f"/api/login-media/{m.id}/download",
-            "mime": m.mime_type,
-        }
-    except Exception as e:
-        print(f"Falha ao salvar registro: {e}")
+        print(f"[DL] EXCEPTION: {e}")
         import traceback
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Falha ao salvar registro: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@_http.get("/api/login-media/{item_id}/debug")
+def login_media_debug(item_id: int, db: Session = Depends(get_db)):
+    """Debug de um vídeo específico"""
+    try:
+        m = db.query(Media).filter(Media.id == int(item_id)).first()
+        if not m:
+            return {"erro": "Não encontrada", "id": item_id}
+        return {
+            "id": m.id,
+            "tipo": m.tipo,
+            "titulo": m.titulo,
+            "mime_type": m.mime_type,
+            "tamanho_bytes": m.tamanho_bytes,
+            "arquivo_blob_size": len(m.arquivo_blob) if m.arquivo_blob else 0,
+            "arquivo_blob_type": type(m.arquivo_blob).__name__,
+            "status": m.status,
+        }
+    except Exception as e:
+        print(f"[DEBUG_{item_id}] Erro: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"erro": str(e)}
 
 
 @_http.delete("/api/login-media/{item_id}")
