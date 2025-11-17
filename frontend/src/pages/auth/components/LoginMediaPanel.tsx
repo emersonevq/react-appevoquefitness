@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import useEmblaCarousel, { EmblaCarouselType } from "embla-carousel-react";
+import useEmblaCarousel from "embla-carousel-react";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 
@@ -47,17 +47,18 @@ export default function LoginMediaPanel() {
     align: "center",
     skipSnaps: false,
   });
-  const autoplayRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const ac = new AbortController();
     fetchLoginMedia(ac.signal)
       .then((list) => {
-        const filtered = list.filter(Boolean);
-        if (filtered.length > 0) setItems(filtered);
+        if (list.length > 0) {
+          setItems(list);
+        }
       })
       .catch(() => {
-        // Keep using default items on error
+        // Use default items
       });
     return () => ac.abort();
   }, []);
@@ -65,39 +66,38 @@ export default function LoginMediaPanel() {
   useEffect(() => {
     if (!emblaApi) return;
 
-    const scheduleNext = () => {
-      if (autoplayRef.current) clearTimeout(autoplayRef.current);
+    const handleAutoplay = () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
       const index = emblaApi.selectedIndex;
       const item = items[index];
 
       if (item?.type === "video") {
-        // Get current video element
+        // For videos, wait for them to end
         const slides = emblaApi.containerNode().querySelectorAll(".embla__slide");
-        const video = slides[index]?.querySelector("video") as HTMLVideoElement | null;
+        const videoEl = slides[index]?.querySelector("video") as HTMLVideoElement | null;
 
-        if (video) {
-          // Wait for video to end, then advance
-          const handleEnd = () => {
-            video.removeEventListener("ended", handleEnd);
+        if (videoEl) {
+          const onVideoEnd = () => {
+            videoEl.removeEventListener("ended", onVideoEnd);
             emblaApi.scrollNext();
           };
-          video.addEventListener("ended", handleEnd, { once: true });
+          videoEl.addEventListener("ended", onVideoEnd, { once: true });
         }
       } else {
-        // Images: advance every 6 seconds
-        autoplayRef.current = setTimeout(() => {
+        // For images, advance every 6 seconds
+        timeoutRef.current = setTimeout(() => {
           emblaApi.scrollNext();
         }, 6000);
       }
     };
 
-    scheduleNext();
-    emblaApi.on("select", scheduleNext);
+    handleAutoplay();
+    emblaApi.on("select", handleAutoplay);
 
     return () => {
-      emblaApi.off("select", scheduleNext);
-      if (autoplayRef.current) clearTimeout(autoplayRef.current);
+      emblaApi.off("select", handleAutoplay);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [emblaApi, items]);
 
@@ -114,55 +114,47 @@ export default function LoginMediaPanel() {
               key={item.id}
               className="embla__slide min-w-0 flex-[0_0_100%] h-full"
             >
-              <SlideContent item={item} />
+              {item.type === "image" && item.url ? (
+                <img
+                  src={item.url}
+                  alt={item.alt || "Mídia"}
+                  className="w-full h-full object-cover"
+                />
+              ) : item.type === "video" && item.url ? (
+                <video
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  muted
+                  playsInline
+                  controls={false}
+                  preload="auto"
+                >
+                  <source src={item.url} type={item.mime || "video/mp4"} />
+                </video>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center p-8">
+                  <div
+                    className={cn(
+                      "rounded-xl p-6 w-full max-w-md text-center",
+                      "bg-white/5 backdrop-blur border border-white/10 text-white",
+                    )}
+                  >
+                    {item.title && (
+                      <h3 className="text-xl font-bold tracking-tight">
+                        {item.title}
+                      </h3>
+                    )}
+                    {item.description && (
+                      <p className="mt-2 text-sm/6 text-white/90">
+                        {item.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function SlideContent({ item }: { item: MediaItem }) {
-  if (item.type === "image" && item.url) {
-    return (
-      <img
-        src={item.url}
-        alt={item.alt || "Média"}
-        className="w-full h-full object-cover"
-      />
-    );
-  }
-
-  if (item.type === "video" && item.url) {
-    return (
-      <video
-        className="w-full h-full object-cover"
-        autoPlay
-        muted
-        playsInline
-        controls={false}
-        preload="auto"
-      >
-        <source src={item.url} type={item.mime || "video/mp4"} />
-      </video>
-    );
-  }
-
-  return (
-    <div className="w-full h-full flex items-center justify-center p-8">
-      <div
-        className={cn(
-          "rounded-xl p-6 w-full max-w-md text-center",
-          "bg-white/5 backdrop-blur border border-white/10 text-white",
-        )}
-      >
-        {item.title && (
-          <h3 className="text-xl font-bold tracking-tight">{item.title}</h3>
-        )}
-        {item.description && (
-          <p className="mt-2 text-sm/6 text-white/90">{item.description}</p>
-        )}
       </div>
     </div>
   );
