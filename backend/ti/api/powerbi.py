@@ -120,8 +120,12 @@ async def get_embed_token(report_id: str, dataset_id: str = "", db: Session = De
                     "roles": [],
                     "datasets": datasets_list
                 }
-            ]
+            ],
+            "allowSaveAs": False,
+            "allowInteraction": True
         }
+
+        print(f"[POWERBI] [EMBED-TOKEN] Payload enviado: {payload}")
 
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.post(
@@ -131,10 +135,18 @@ async def get_embed_token(report_id: str, dataset_id: str = "", db: Session = De
             )
 
             print(f"[POWERBI] [EMBED-TOKEN] Status da resposta: {response.status_code}")
+            print(f"[POWERBI] [EMBED-TOKEN] Response body: {response.text}")
 
             if response.status_code != 200:
                 error_detail = response.text
                 print(f"[POWERBI] [EMBED-TOKEN] ❌ Erro: {error_detail}")
+
+                if response.status_code == 403:
+                    print(f"[POWERBI] [EMBED-TOKEN] 🔍 Diagnóstico 403:")
+                    print(f"  - Service Principal tem acesso ao workspace?")
+                    print(f"  - Dataset {dataset_id} existe e está acessível?")
+                    print(f"  - Report {report_id} está no dataset correto?")
+
                 raise HTTPException(
                     status_code=response.status_code,
                     detail=f"Power BI API error: {error_detail}"
