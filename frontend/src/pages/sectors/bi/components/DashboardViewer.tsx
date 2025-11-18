@@ -18,31 +18,70 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const embedContainerRef = useRef<HTMLDivElement | null>(null);
   const reportRef = useRef<pbi.Report | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const successOverlayRef = useRef<HTMLDivElement | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   const triggerConfetti = () => {
+    if (!canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const containerRect = embedContainerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    canvas.width = containerRect.width;
+    canvas.height = containerRect.height;
+
     const duration = 2000;
     const animationEnd = Date.now() + duration;
-    const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 };
+
+    const colors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA502", "#FF1744"];
 
     const randomInRange = (min: number, max: number) =>
       Math.random() * (max - min) + min;
 
-    const interval: NodeJS.Timeout = setInterval(() => {
+    const animate = () => {
       const timeLeft = animationEnd - Date.now();
 
       if (timeLeft <= 0) {
-        clearInterval(interval);
+        if (successOverlayRef.current) {
+          successOverlayRef.current.style.opacity = "0";
+          setTimeout(() => {
+            if (successOverlayRef.current) {
+              successOverlayRef.current.style.display = "none";
+            }
+          }, 300);
+        }
         return;
       }
 
-      const particleCount = 50 * (timeLeft / duration);
+      const progress = 1 - timeLeft / duration;
+      const particleCount = Math.max(0, 50 * (1 - progress));
+
       confetti({
-        ...defaults,
         particleCount,
-        origin: { x: randomInRange(0.1, 0.9), y: Math.random() - 0.2 },
+        angle: randomInRange(60, 120),
+        spread: randomInRange(40, 80),
+        origin: { x: randomInRange(0.2, 0.8), y: 1 },
+        velocity: randomInRange(8, 20),
+        decay: randomInRange(0.85, 0.95),
+        scalar: randomInRange(0.5, 1),
+        canvas,
+        shapes: ["square"],
+        colors,
+        gravity: 1,
+        drift: randomInRange(-0.5, 0.5),
       });
-    }, 250);
+
+      requestAnimationFrame(animate);
+    };
+
+    if (successOverlayRef.current) {
+      successOverlayRef.current.style.display = "flex";
+      successOverlayRef.current.style.opacity = "1";
+    }
+
+    animate();
   };
 
   // Load and embed Power BI report with token
