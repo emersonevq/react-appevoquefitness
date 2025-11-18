@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from core.db import get_db
 import httpx
 import os
+import asyncio
 from dotenv import load_dotenv
 
 load_dotenv()
