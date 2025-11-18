@@ -90,7 +90,7 @@ export const dashboardsData: DashboardCategory[] = [
         title: "Controle de Cotas",
         description: "Controle e acompanhamento de cotas por unidade",
         reportId: "4bc4c1aa-b8c5-4a8a-b3a2-2417cdfb17c2",
-        datasetId: "726ba440-0cf6-4ef8-a4d5-a8e7dd57653a",
+        datasetId: "3e8c451f-c4ee-418f-b6b3-07a091e33883",
         category: "unidades",
         allowedUsers: ["Tiago Garbe", "Benwilson Jolo"],
       },
