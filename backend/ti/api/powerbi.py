@@ -5,6 +5,7 @@ from core.db import get_db
 import httpx
 import os
 import asyncio
+import html
 from dotenv import load_dotenv
 
 load_dotenv()
