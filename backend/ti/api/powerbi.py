@@ -100,13 +100,17 @@ async def get_powerbi_token(db: Session = Depends(get_db)):
 
 
 @router.get("/embed-token/{report_id}")
-async def get_embed_token(report_id: str, db: Session = Depends(get_db)):
+async def get_embed_token(report_id: str, dataset_id: str = "", db: Session = Depends(get_db)):
     """Generate an embed token for a specific Power BI report"""
     print(f"[POWERBI] [EMBED-TOKEN] Requisição para report_id: {report_id}")
+    print(f"[POWERBI] [EMBED-TOKEN] Dataset ID: {dataset_id}")
     try:
         service_token = await get_service_principal_token()
         print(f"[POWERBI] [EMBED-TOKEN] Token de serviço obtido ✅")
         headers = {"Authorization": f"Bearer {service_token}"}
+
+        datasets_list = [dataset_id] if dataset_id else [report_id]
+        print(f"[POWERBI] [EMBED-TOKEN] Usando datasets: {datasets_list}")
 
         payload = {
             "accessLevel": "View",
@@ -114,7 +118,7 @@ async def get_embed_token(report_id: str, db: Session = Depends(get_db)):
                 {
                     "username": "service-principal",
                     "roles": [],
-                    "datasets": [report_id]
+                    "datasets": datasets_list
                 }
             ]
         }
