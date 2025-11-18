@@ -133,13 +133,24 @@ async def get_embed_token(
         embed_url = f"{POWERBI_API_URL}/groups/{POWERBI_WORKSPACE_ID}/reports/{report_id}/GenerateToken"
         print(f"[POWERBI] [EMBED-TOKEN] URL: {embed_url}")
 
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            # Gerar o token
-            response = await client.post(
-                embed_url,
-                json=payload,
-                headers=headers,
-            )
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            # Gerar o token (aumentado timeout para 60s porque api.powerbi.com pode ser lenta)
+            try:
+                response = await client.post(
+                    embed_url,
+                    json=payload,
+                    headers=headers,
+                )
+            except httpx.ReadTimeout:
+                print(f"[POWERBI] [EMBED-TOKEN] ⚠️ Timeout na primeira tentativa, aguardando...")
+                # Retry uma vez após esperar um pouco
+                import asyncio
+                await asyncio.sleep(2)
+                response = await client.post(
+                    embed_url,
+                    json=payload,
+                    headers=headers,
+                )
 
             print(f"[POWERBI] [EMBED-TOKEN] Status: {response.status_code}")
             print(f"[POWERBI] [EMBED-TOKEN] Response: {response.text[:500]}")
