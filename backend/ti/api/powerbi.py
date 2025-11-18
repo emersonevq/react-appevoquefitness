@@ -210,6 +210,18 @@ async def get_embed_token(
 
     except HTTPException:
         raise
+    except (httpx.ReadTimeout, httpx.TimeoutException):
+        print(f"[POWERBI] [EMBED-TOKEN] ❌ Timeout ao conectar com Power BI API")
+        raise HTTPException(
+            status_code=504,
+            detail="Timeout ao conectar com Power BI. A API pode estar lenta. Tente novamente."
+        )
+    except httpx.RequestError as e:
+        print(f"[POWERBI] [EMBED-TOKEN] ❌ Erro de rede: {str(e)}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Erro de conexão com Power BI: {str(e)}"
+        )
     except Exception as e:
         print(f"[POWERBI] [EMBED-TOKEN] ❌ Erro inesperado: {str(e)}")
         import traceback
