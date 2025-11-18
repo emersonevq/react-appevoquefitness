@@ -108,9 +108,14 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
 
         const tokenData = await tokenResponse.json();
         const embedToken = tokenData.token;
+        const embedUrl = tokenData.embedUrl;
 
         if (!embedToken) {
           throw new Error("Nenhum token de embed recebido");
+        }
+
+        if (!embedUrl) {
+          throw new Error("Nenhuma URL de embed recebida da API");
         }
 
         if (!isMounted) return;
@@ -127,7 +132,7 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
         const embedConfig: pbi.IReportEmbedConfiguration = {
           type: "report",
           id: dashboard.reportId,
-          embedUrl: `https://app.powerbi.com/reportEmbed?reportId=${dashboard.reportId}&ctid=${TENANT_ID}`,
+          embedUrl: embedUrl,
           accessToken: embedToken,
           tokenExpiration: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
           permissions: pbi.models.Permissions.All,
