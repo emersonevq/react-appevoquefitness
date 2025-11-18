@@ -22,12 +22,10 @@ export default function AuthenticationHandler({
       try {
         const response = await apiFetch("/powerbi/token");
 
-        // Even if the token endpoint is not fully configured (missing secret),
-        // we can still proceed since Power BI embed uses autoAuth
         if (response.ok) {
           const data = await response.json();
           if (data.access_token) {
-            // Token obtained successfully
+            console.log("✅ Token obtido com sucesso");
             if (isMounted) {
               setStatus("success");
               setTimeout(() => {
@@ -35,50 +33,45 @@ export default function AuthenticationHandler({
                   setStatus("authenticated");
                   onAuthenticated();
                 }
-              }, 2000);
+              }, 1500);
             }
             return;
           }
         }
 
-        // If no token but response indicates client secret not configured,
-        // proceed anyway since Power BI will handle authentication
-        if (response.status === 400 || response.status === 401) {
-          const data = await response.json();
-          if (data.detail && data.detail.includes("client secret")) {
-            // Client secret not configured, but we can still proceed with autoAuth
-            if (isMounted) {
-              setStatus("success");
-              setTimeout(() => {
-                if (isMounted) {
-                  setStatus("authenticated");
-                  onAuthenticated();
-                }
-              }, 2000);
-            }
-            return;
-          }
-        }
-
-        throw new Error(`Authentication failed: ${response.status}`);
-      } catch (error) {
-        if (isMounted) {
-          // Check if it's a network error (backend not running)
-          const message =
-            error instanceof Error ? error.message : "Authentication failed";
-
-          // If it's a network error, still proceed with embedded dashboards
-          if (message.includes("fetch") || message.includes("ECONNREFUSED")) {
+        if (response.status >= 400 && response.status < 500) {
+          console.warn("⚠️ Erro de autenticação, prosseguindo com autoAuth");
+          if (isMounted) {
             setStatus("success");
             setTimeout(() => {
               if (isMounted) {
                 setStatus("authenticated");
                 onAuthenticated();
               }
-            }, 2000);
+            }, 1500);
+          }
+          return;
+        }
+
+        throw new Error(`Erro: ${response.status}`);
+      } catch (error) {
+        if (isMounted) {
+          const message =
+            error instanceof Error ? error.message : "Falha ao autenticar";
+
+          if (message.includes("fetch") || message.includes("ECONNREFUSED")) {
+            console.warn("⚠️ Erro de rede, prosseguindo");
+            setStatus("success");
+            setTimeout(() => {
+              if (isMounted) {
+                setStatus("authenticated");
+                onAuthenticated();
+              }
+            }, 1500);
             return;
           }
 
+          console.error("❌ Erro na autenticação:", message);
           setErrorMessage(message);
           setStatus("error");
         }
@@ -103,7 +96,7 @@ export default function AuthenticationHandler({
           <div className="flex flex-col items-center gap-4">
             <div className="w-12 h-12 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
             <p className="text-base text-muted-foreground animate-pulse">
-              Carregando credenciais...
+              Logando...
             </p>
           </div>
         )}

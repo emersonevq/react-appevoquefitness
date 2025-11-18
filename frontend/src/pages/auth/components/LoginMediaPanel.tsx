@@ -146,9 +146,10 @@ export default function LoginMediaPanel() {
                     className="w-full h-full object-cover"
                     muted
                     playsInline
-                    preload="auto"
-                    onLoadedData={() => handleVideoLoaded(item.id)}
+                    preload="metadata"
+                    onCanPlay={() => handleVideoLoaded(item.id)}
                     onError={(e) => handleVideoError(item.id, e)}
+                    onLoadStart={() => {}}
                   >
                     <source src={item.url} type={item.mime || "video/mp4"} />
                     Your browser does not support the video tag.
@@ -157,7 +158,7 @@ export default function LoginMediaPanel() {
                   {/* Loading indicator for videos */}
                   {!loadedVideos.has(item.id) && (
                     <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                      <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin" />
+                      <div className="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin" />
                     </div>
                   )}
                 </>

@@ -3,6 +3,7 @@ import { Dashboard } from "../data/dashboards";
 import { Loader } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import * as pbi from "powerbi-client";
+import confetti from "canvas-confetti";
 
 interface DashboardViewerProps {
   dashboard: Dashboard;
@@ -12,11 +13,76 @@ const TENANT_ID = "9f45f492-87a3-4214-862d-4c0d080aa136";
 
 export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticating, setIsAuthenticating] = useState(true);
   const [embedError, setEmbedError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const embedContainerRef = useRef<HTMLDivElement | null>(null);
   const reportRef = useRef<pbi.Report | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const successOverlayRef = useRef<HTMLDivElement | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const triggerConfetti = () => {
+    if (!canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const containerRect = embedContainerRef.current?.getBoundingClientRect();
+    if (!containerRect) return;
+
+    canvas.width = containerRect.width;
+    canvas.height = containerRect.height;
+
+    const duration = 2000;
+    const animationEnd = Date.now() + duration;
+
+    const colors = ["#FF6B6B", "#4ECDC4", "#45B7D1", "#FFA502", "#FF1744"];
+
+    const randomInRange = (min: number, max: number) =>
+      Math.random() * (max - min) + min;
+
+    const animate = () => {
+      const timeLeft = animationEnd - Date.now();
+
+      if (timeLeft <= 0) {
+        if (successOverlayRef.current) {
+          successOverlayRef.current.style.opacity = "0";
+          setTimeout(() => {
+            if (successOverlayRef.current) {
+              successOverlayRef.current.style.display = "none";
+            }
+          }, 300);
+        }
+        return;
+      }
+
+      const progress = 1 - timeLeft / duration;
+      const particleCount = Math.max(0, 50 * (1 - progress));
+
+      confetti({
+        particleCount,
+        angle: randomInRange(60, 120),
+        spread: randomInRange(40, 80),
+        origin: { x: randomInRange(0.2, 0.8), y: 1 },
+        velocity: randomInRange(8, 20),
+        decay: randomInRange(0.85, 0.95),
+        scalar: randomInRange(0.5, 1),
+        canvas,
+        shapes: ["square"],
+        colors,
+        gravity: 1,
+        drift: randomInRange(-0.5, 0.5),
+      });
+
+      requestAnimationFrame(animate);
+    };
+
+    if (successOverlayRef.current) {
+      successOverlayRef.current.style.display = "flex";
+      successOverlayRef.current.style.opacity = "1";
+    }
+
+    animate();
+  };
 
   // Load and embed Power BI report with token
   useEffect(() => {
@@ -26,6 +92,7 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
     const embedReport = async () => {
       try {
         setIsLoading(true);
+        setIsAuthenticating(true);
         setEmbedError(null);
 
         // Get embed token
@@ -34,15 +101,20 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
         );
 
         if (!tokenResponse.ok) {
-          throw new Error(`Failed to get embed token: ${tokenResponse.status}`);
+          throw new Error(
+            `Falha ao obter token de embed: ${tokenResponse.status}`,
+          );
         }
 
         const tokenData = await tokenResponse.json();
         const embedToken = tokenData.token;
 
         if (!embedToken) {
-          throw new Error("No embed token received");
+          throw new Error("Nenhum token de embed recebido");
         }
+
+        if (!isMounted) return;
+        setIsAuthenticating(false);
 
         // Create Power BI client
         const powerBiClient = new pbi.service.Service(
@@ -82,13 +154,14 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
           report.on("loaded", () => {
             if (isMounted) {
               setIsLoading(false);
+              triggerConfetti();
             }
           });
 
           report.on("error", (event: any) => {
             console.error("Report error:", event.detail);
             if (isMounted) {
-              setEmbedError("Failed to load report");
+              setEmbedError("Erro ao carregar relatório");
               setIsLoading(false);
             }
           });
@@ -97,9 +170,12 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
         console.error("Error embedding report:", error);
         if (isMounted) {
           setEmbedError(
-            error instanceof Error ? error.message : "Failed to load dashboard",
+            error instanceof Error
+              ? error.message
+              : "Erro ao carregar dashboard",
           );
           setIsLoading(false);
+          setIsAuthenticating(false);
         }
       }
     };
@@ -250,7 +326,9 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
           <div className="bi-loading-overlay">
             <div className="flex flex-col items-center gap-3">
               <Loader className="w-6 h-6 animate-spin text-primary" />
-              <p className="text-sm text-gray-600">Carregando dashboard...</p>
+              <p className="text-sm text-gray-600">
+                {isAuthenticating ? "Logando..." : "Carregando dashboard..."}
+              </p>
             </div>
           </div>
         )}
@@ -271,8 +349,50 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
             width: "100%",
             height: "100%",
             display: embedError ? "none" : "block",
+            position: "relative",
+            overflow: "hidden",
           }}
-        />
+        >
+          <canvas
+            ref={canvasRef}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              pointerEvents: "none",
+              zIndex: 999,
+            }}
+          />
+          <div
+            ref={successOverlayRef}
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              display: "none",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+              pointerEvents: "none",
+              transition: "opacity 0.3s ease-out",
+              opacity: 0,
+            }}
+          >
+            <div
+              style={{
+                fontSize: "48px",
+                fontWeight: "bold",
+                color: "rgba(0, 0, 0, 0.7)",
+                textShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+                letterSpacing: "0.5px",
+              }}
+            >
+              Sucesso!
+            </div>
+          </div>
+        </div>
 
         {isFullscreen && (
           <button
