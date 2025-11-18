@@ -78,10 +78,13 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
 
         const isDevelopmentMode = tokenData.mode === "development";
         if (isDevelopmentMode) {
-          console.warn("⚠️ Modo de desenvolvimento: usando token simulado");
+          console.warn("⚠️ Modo de desenvolvimento ativo");
         }
 
         setIsAuthenticating(false);
+
+        // Pequeno delay para garantir que o estado foi atualizado
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         // Create Power BI client
         const powerBiClient = new pbi.service.Service(
