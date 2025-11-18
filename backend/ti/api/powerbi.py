@@ -244,6 +244,91 @@ async def check_powerbi_status(db: Session = Depends(get_db)):
         }
 
 
+@router.get("/debug/datasets")
+async def debug_datasets_access(db: Session = Depends(get_db)):
+    """Debug endpoint to check if service principal has access to datasets"""
+    try:
+        token = await get_service_principal_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                f"{POWERBI_API_URL}/datasets",
+                headers=headers,
+            )
+
+            print(f"[POWERBI] [DEBUG-DATASETS] Status: {response.status_code}")
+            print(f"[POWERBI] [DEBUG-DATASETS] Response: {response.text[:500]}")
+
+            if response.status_code == 200:
+                datasets = response.json()
+                return {
+                    "status": "✅ Service principal tem acesso aos datasets",
+                    "datasets_count": len(datasets.get("value", [])),
+                    "datasets": [
+                        {
+                            "id": d.get("id"),
+                            "name": d.get("name"),
+                            "webUrl": d.get("webUrl", "N/A")
+                        }
+                        for d in datasets.get("value", [])[:10]
+                    ]
+                }
+            else:
+                return {
+                    "status": f"❌ Erro ao acessar datasets (Status {response.status_code})",
+                    "error": response.text
+                }
+    except Exception as e:
+        return {
+            "status": "❌ Erro ao verificar acesso",
+            "error": str(e)
+        }
+
+
+@router.get("/debug/reports")
+async def debug_reports_access(db: Session = Depends(get_db)):
+    """Debug endpoint to check if service principal has access to reports"""
+    try:
+        token = await get_service_principal_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                f"{POWERBI_API_URL}/reports",
+                headers=headers,
+            )
+
+            print(f"[POWERBI] [DEBUG-REPORTS] Status: {response.status_code}")
+            print(f"[POWERBI] [DEBUG-REPORTS] Response: {response.text[:500]}")
+
+            if response.status_code == 200:
+                reports = response.json()
+                return {
+                    "status": "✅ Service principal tem acesso aos reports",
+                    "reports_count": len(reports.get("value", [])),
+                    "reports": [
+                        {
+                            "id": r.get("id"),
+                            "name": r.get("name"),
+                            "datasetId": r.get("datasetId"),
+                            "webUrl": r.get("webUrl", "N/A")
+                        }
+                        for r in reports.get("value", [])[:10]
+                    ]
+                }
+            else:
+                return {
+                    "status": f"❌ Erro ao acessar reports (Status {response.status_code})",
+                    "error": response.text
+                }
+    except Exception as e:
+        return {
+            "status": "❌ Erro ao verificar acesso",
+            "error": str(e)
+        }
+
+
 @router.get("/debug/config")
 def debug_powerbi_config():
     """Debug endpoint to check current Power BI configuration"""
