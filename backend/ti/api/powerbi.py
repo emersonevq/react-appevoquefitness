@@ -560,6 +560,48 @@ async def debug_reports_access():
         return {"status": "❌ Erro", "error": str(e)}
 
 
+@router.get("/debug/embed-url/{report_id}")
+async def debug_embed_url(report_id: str):
+    """Debug endpoint: Check embedUrl format for a specific report"""
+    try:
+        token = await get_service_principal_token()
+        headers = {"Authorization": f"Bearer {token}"}
+
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                f"{POWERBI_API_URL}/groups/{POWERBI_WORKSPACE_ID}/reports/{report_id}",
+                headers=headers,
+            )
+
+            if response.status_code == 200:
+                report_data = response.json()
+                embed_url = report_data.get("embedUrl", "NOT PROVIDED")
+
+                return {
+                    "status": "✅ Found",
+                    "report_id": report_id,
+                    "embed_url": embed_url,
+                    "embed_url_valid": isinstance(embed_url, str) and embed_url.startswith("https://"),
+                    "has_groupId": "groupId=" in str(embed_url),
+                    "has_reportId": f"reportId={report_id}" in str(embed_url),
+                    "url_length": len(str(embed_url)),
+                    "fallback_url": f"https://app.powerbi.com/reportEmbed?reportId={report_id}&groupId={POWERBI_WORKSPACE_ID}&w=2"
+                }
+            else:
+                return {
+                    "status": f"❌ Error {response.status_code}",
+                    "error": response.text[:500],
+                    "fallback_url": f"https://app.powerbi.com/reportEmbed?reportId={report_id}&groupId={POWERBI_WORKSPACE_ID}&w=2"
+                }
+    except Exception as e:
+        import traceback
+        return {
+            "status": "❌ Error",
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }
+
+
 @router.get("/status")
 async def check_powerbi_status():
     """Check Power BI connection status"""
