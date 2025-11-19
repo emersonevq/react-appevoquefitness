@@ -192,19 +192,32 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
 
         console.group("[PowerBI] 📊 Resposta do servidor recebida");
         console.log("Token:", token ? "✅ Presente" : "❌ Ausente");
+        console.log("Token type:", typeof token);
+        console.log("Token length:", token?.length || 0);
+
         console.log("embedUrl:", embedUrl ? "✅ Presente" : "❌ Ausente");
         if (embedUrl) {
           console.log("embedUrl type:", typeof embedUrl);
           console.log("embedUrl length:", embedUrl.length);
-          console.log("embedUrl value:", embedUrl);
+          // Log URL completa (importante para debug)
+          console.log("embedUrl COMPLETA:", embedUrl);
           console.log("Válida (https):", embedUrl.startsWith("https://"));
           console.log("Contém app.powerbi.com:", embedUrl.includes("app.powerbi.com"));
+          console.log("Contém reportId:", embedUrl.includes("reportId"));
+          console.log("Contém groupId:", embedUrl.includes("groupId"));
         }
         console.groupEnd();
 
-        if (!token || !embedUrl) {
+        // Validação rigorosa
+        if (!token || typeof token !== "string" || token.trim().length === 0) {
           throw new Error(
-            "Token ou embedUrl ausente na resposta do servidor",
+            `Token inválido: tipo=${typeof token}, length=${token?.length || 0}`,
+          );
+        }
+
+        if (!embedUrl || typeof embedUrl !== "string" || embedUrl.trim().length === 0) {
+          throw new Error(
+            `embedUrl inválida: tipo=${typeof embedUrl}, length=${embedUrl?.length || 0}`,
           );
         }
 
