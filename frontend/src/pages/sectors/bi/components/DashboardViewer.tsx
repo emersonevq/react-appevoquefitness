@@ -190,29 +190,23 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
         const data = await response.json();
         const { token, embedUrl } = data;
 
+        console.group("[PowerBI] 📊 Resposta do servidor recebida");
+        console.log("Token:", token ? "✅ Presente" : "❌ Ausente");
+        console.log("embedUrl:", embedUrl ? "✅ Presente" : "❌ Ausente");
+        if (embedUrl) {
+          console.log("embedUrl type:", typeof embedUrl);
+          console.log("embedUrl length:", embedUrl.length);
+          console.log("embedUrl value:", embedUrl);
+          console.log("Válida (https):", embedUrl.startsWith("https://"));
+          console.log("Contém app.powerbi.com:", embedUrl.includes("app.powerbi.com"));
+        }
+        console.groupEnd();
+
         if (!token || !embedUrl) {
           throw new Error(
             "Token ou embedUrl ausente na resposta do servidor",
           );
         }
-
-        console.log("[PowerBI] ✅ Token recebido");
-        console.log(
-          "[PowerBI] embedUrl COMPLETA:",
-          embedUrl,
-        );
-        console.log(
-          "[PowerBI] embedUrl começa com https://",
-          embedUrl.startsWith("https://"),
-        );
-        console.log(
-          "[PowerBI] embedUrl contém app.powerbi.com",
-          embedUrl.includes("app.powerbi.com"),
-        );
-        console.log(
-          "[PowerBI] embedUrl length:",
-          embedUrl.length,
-        );
 
         if (!isMounted) {
           console.log("[PowerBI] Componente desmontado, abortando");
