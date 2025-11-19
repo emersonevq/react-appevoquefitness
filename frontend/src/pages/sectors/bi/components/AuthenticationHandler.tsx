@@ -11,7 +11,7 @@ export default function AuthenticationHandler({
   children,
 }: AuthenticationHandlerProps) {
   const [status, setStatus] = useState<
-    "loading" | "success" | "error" | "authenticated"
+    "loading" | "error" | "authenticated"
   >("loading");
   const [errorMessage, setErrorMessage] = useState("");
 
