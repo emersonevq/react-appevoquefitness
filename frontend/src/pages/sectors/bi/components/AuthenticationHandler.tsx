@@ -51,13 +51,8 @@ export default function AuthenticationHandler({
 
           if (message.includes("fetch") || message.includes("ECONNREFUSED")) {
             console.warn("⚠️ Erro de rede, prosseguindo");
-            setStatus("success");
-            setTimeout(() => {
-              if (isMounted) {
-                setStatus("authenticated");
-                onAuthenticated();
-              }
-            }, 1500);
+            setStatus("authenticated");
+            onAuthenticated();
             return;
           }
 
