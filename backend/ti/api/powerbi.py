@@ -329,7 +329,7 @@ async def get_embed_token(
             detail=f"Erro de conexão com Power BI: {str(e)}"
         )
     except Exception as e:
-        print(f"[POWERBI] [EMBED-TOKEN] ❌ Erro inesperado: {str(e)}")
+        print(f"[POWERBI] [EMBED-TOKEN] ��� Erro inesperado: {str(e)}")
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
@@ -364,21 +364,174 @@ async def get_powerbi_reports(db: Session = Depends(get_db)):
     try:
         token = await get_service_principal_token()
         headers = {"Authorization": f"Bearer {token}"}
-        
+
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{POWERBI_API_URL}/reports",
                 headers=headers,
             )
-            
+
             if response.status_code != 200:
                 print(f"[POWERBI] Reports error: {response.text}")
                 return {"value": []}
-            
+
             return response.json()
     except Exception as e:
         print(f"[POWERBI] Error fetching reports: {e}")
         return {"value": []}
+
+
+# ============================================
+# DATABASE DASHBOARDS ENDPOINTS
+# ============================================
+
+@router.get("/db/dashboards", response_model=list[PowerBIDashboardOut])
+async def get_db_dashboards(db: Session = Depends(get_db)):
+    """Get all dashboards from database (active only)"""
+    try:
+        dashboards = db.query(PowerBIDashboard)\
+            .filter(PowerBIDashboard.ativo == True)\
+            .order_by(PowerBIDashboard.category, PowerBIDashboard.order)\
+            .all()
+
+        print(f"[POWERBI] [DB] Encontrados {len(dashboards)} dashboards ativos")
+        return dashboards
+    except Exception as e:
+        print(f"[POWERBI] [DB] Erro ao buscar dashboards: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar dashboards: {str(e)}")
+
+
+@router.get("/db/dashboards/by-id/{dashboard_id}", response_model=PowerBIDashboardOut)
+async def get_db_dashboard_by_id(dashboard_id: str, db: Session = Depends(get_db)):
+    """Get specific dashboard from database by dashboard_id"""
+    try:
+        dashboard = db.query(PowerBIDashboard)\
+            .filter(PowerBIDashboard.dashboard_id == dashboard_id)\
+            .filter(PowerBIDashboard.ativo == True)\
+            .first()
+
+        if not dashboard:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Dashboard '{dashboard_id}' not found"
+            )
+
+        print(f"[POWERBI] [DB] Dashboard encontrado: {dashboard.title}")
+        return dashboard
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[POWERBI] [DB] Erro ao buscar dashboard: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar dashboard: {str(e)}")
+
+
+@router.get("/db/dashboards/category/{category}", response_model=list[PowerBIDashboardOut])
+async def get_db_dashboards_by_category(category: str, db: Session = Depends(get_db)):
+    """Get dashboards by category from database"""
+    try:
+        dashboards = db.query(PowerBIDashboard)\
+            .filter(PowerBIDashboard.category == category)\
+            .filter(PowerBIDashboard.ativo == True)\
+            .order_by(PowerBIDashboard.order)\
+            .all()
+
+        print(f"[POWERBI] [DB] Encontrados {len(dashboards)} dashboards da categoria '{category}'")
+        return dashboards
+    except Exception as e:
+        print(f"[POWERBI] [DB] Erro ao buscar dashboards por categoria: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar dashboards: {str(e)}")
+
+
+@router.post("/db/dashboards", response_model=PowerBIDashboardOut)
+async def create_db_dashboard(dashboard: PowerBIDashboardCreate, db: Session = Depends(get_db)):
+    """Create new dashboard in database"""
+    try:
+        # Check if dashboard_id already exists
+        existing = db.query(PowerBIDashboard)\
+            .filter(PowerBIDashboard.dashboard_id == dashboard.dashboard_id)\
+            .first()
+
+        if existing:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Dashboard com ID '{dashboard.dashboard_id}' já existe"
+            )
+
+        new_dashboard = PowerBIDashboard(**dashboard.model_dump())
+        db.add(new_dashboard)
+        db.commit()
+        db.refresh(new_dashboard)
+
+        print(f"[POWERBI] [DB] Dashboard criado: {new_dashboard.title}")
+        return new_dashboard
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"[POWERBI] [DB] Erro ao criar dashboard: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao criar dashboard: {str(e)}")
+
+
+@router.put("/db/dashboards/{dashboard_id}", response_model=PowerBIDashboardOut)
+async def update_db_dashboard(
+    dashboard_id: str,
+    dashboard_update: PowerBIDashboardUpdate,
+    db: Session = Depends(get_db)
+):
+    """Update dashboard in database"""
+    try:
+        dashboard = db.query(PowerBIDashboard)\
+            .filter(PowerBIDashboard.dashboard_id == dashboard_id)\
+            .first()
+
+        if not dashboard:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Dashboard '{dashboard_id}' not found"
+            )
+
+        update_data = dashboard_update.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(dashboard, field, value)
+
+        db.commit()
+        db.refresh(dashboard)
+
+        print(f"[POWERBI] [DB] Dashboard atualizado: {dashboard.title}")
+        return dashboard
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"[POWERBI] [DB] Erro ao atualizar dashboard: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao atualizar dashboard: {str(e)}")
+
+
+@router.delete("/db/dashboards/{dashboard_id}")
+async def delete_db_dashboard(dashboard_id: str, db: Session = Depends(get_db)):
+    """Delete dashboard from database (soft delete - marks as inactive)"""
+    try:
+        dashboard = db.query(PowerBIDashboard)\
+            .filter(PowerBIDashboard.dashboard_id == dashboard_id)\
+            .first()
+
+        if not dashboard:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Dashboard '{dashboard_id}' not found"
+            )
+
+        dashboard.ativo = False
+        db.commit()
+
+        print(f"[POWERBI] [DB] Dashboard desativado: {dashboard.title}")
+        return {"message": f"Dashboard '{dashboard_id}' desativado com sucesso"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"[POWERBI] [DB] Erro ao deletar dashboard: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao deletar dashboard: {str(e)}")
 
 
 # ============================================
