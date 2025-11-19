@@ -134,7 +134,7 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
 
         const embedConfig: pbi.IReportEmbedConfiguration = {
           type: "report",
-          id: dashboard.reportId,
+          id: dashboard.report_id,
           embedUrl: embedUrl,
           accessToken: token,
           tokenType: pbi.models.TokenType.Embed,
