@@ -104,22 +104,11 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
         const { token, embedUrl } = data;
 
         if (!token || !embedUrl) {
-          throw new Error("Token ou embedUrl ausente");
+          throw new Error("Token ou embedUrl ausente na resposta do servidor");
         }
 
-        // Validate embedUrl format with detailed diagnostics
-        const validation = validateEmbedUrl(embedUrl);
-
-        if (!validation.isValid) {
-          const errorMessage = `embedUrl inválida: ${validation.errors.join(", ")}`;
-          console.error("[PowerBI] Validation errors:", validation.errors);
-          console.error("[PowerBI] Full URL:", embedUrl);
-          throw new Error(errorMessage);
-        }
-
-        // Log diagnostics
-        logEmbedUrlDiagnostics(embedUrl, "[PowerBI]");
-        console.log("[PowerBI] Metadata:", validation.metadata);
+        console.log("[PowerBI] ✅ Token e embedUrl recebidos");
+        console.log("[PowerBI] URL preview:", embedUrl.substring(0, 150) + "...");
 
         const powerBiClient = new pbi.service.Service(
           pbi.factories.hpmFactory,
