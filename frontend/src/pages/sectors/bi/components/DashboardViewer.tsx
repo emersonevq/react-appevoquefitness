@@ -95,7 +95,7 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
     const cleanupPreviousEmbed = () => {
       console.log("[PowerBI] 🧹 Limpando embed anterior...");
 
-      // Remover listeners do report anterior
+      // 1. Remover listeners do report anterior
       if (reportRef.current) {
         try {
           reportRef.current.off("loaded");
@@ -108,33 +108,59 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
         reportRef.current = null;
       }
 
-      // Limpar container completamente
+      // 2. Resetar Power BI Service ANTES de limpar container
+      // Isso é importante - o Service precisa saber que o container vai mudar
+      if (powerBiClient && embedContainerRef.current) {
+        try {
+          powerBiClient.reset(embedContainerRef.current);
+          console.log("[PowerBI] Power BI Service resetado");
+        } catch (e) {
+          console.warn("[PowerBI] Erro ao resetar Power BI Service:", e);
+        }
+      }
+
+      // 3. Limpar container completamente
       if (embedContainerRef.current) {
         try {
-          // Remover todos os filhos
-          while (embedContainerRef.current.firstChild) {
-            embedContainerRef.current.removeChild(embedContainerRef.current.firstChild);
-          }
-          // Resetar atributos
+          // Remover todos os iframes e elementos
+          const iframes = embedContainerRef.current.querySelectorAll("iframe");
+          iframes.forEach((iframe) => {
+            try {
+              iframe.remove();
+              console.log("[PowerBI] iframe removido");
+            } catch (e) {
+              console.warn("[PowerBI] Erro ao remover iframe:", e);
+            }
+          });
+
+          // Limpar todo o conteúdo
           embedContainerRef.current.innerHTML = "";
+
+          // Remover atributos de estilo
           embedContainerRef.current.style.cssText = "";
-          console.log("[PowerBI] Container limpo");
+
+          // Remover atributos customizados que o Power BI pode ter adicionado
+          Array.from(embedContainerRef.current.attributes).forEach((attr) => {
+            if (attr.name.startsWith("data-") || attr.name.startsWith("aria-")) {
+              embedContainerRef.current?.removeAttribute(attr.name);
+            }
+          });
+
+          console.log("[PowerBI] Container totalmente limpo");
         } catch (e) {
           console.warn("[PowerBI] Erro ao limpar container:", e);
         }
       }
 
-      // Resetar Power BI Service se existir
+      // 4. Destruir instância anterior do Service
       if (powerBiClient) {
         try {
-          if (embedContainerRef.current) {
-            powerBiClient.reset(embedContainerRef.current);
-          }
-          console.log("[PowerBI] Power BI Service resetado");
+          // Setar como null para garbage collection
+          powerBiClient = null;
+          console.log("[PowerBI] Instância anterior do Power BI Service destruída");
         } catch (e) {
-          console.warn("[PowerBI] Erro ao resetar Power BI Service:", e);
+          console.warn("[PowerBI] Erro ao destruir Service:", e);
         }
-        powerBiClient = null;
       }
     };
 
