@@ -473,6 +473,7 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
     return () => {
       console.log("[PowerBI] 🔌 Limpeza: Desmontando componente");
       isMounted = false;
+      tokenRequestStarted = false;
       abortController.abort();
       cleanupPreviousEmbed();
     };
