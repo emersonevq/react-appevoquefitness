@@ -198,8 +198,20 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
 
         console.log("[PowerBI] ✅ Token recebido");
         console.log(
-          "[PowerBI] embedUrl:",
-          embedUrl.substring(0, 100) + "...",
+          "[PowerBI] embedUrl COMPLETA:",
+          embedUrl,
+        );
+        console.log(
+          "[PowerBI] embedUrl começa com https://",
+          embedUrl.startsWith("https://"),
+        );
+        console.log(
+          "[PowerBI] embedUrl contém app.powerbi.com",
+          embedUrl.includes("app.powerbi.com"),
+        );
+        console.log(
+          "[PowerBI] embedUrl length:",
+          embedUrl.length,
         );
 
         if (!isMounted) {
