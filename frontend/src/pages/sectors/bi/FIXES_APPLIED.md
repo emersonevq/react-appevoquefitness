@@ -1,6 +1,7 @@
 # 🔧 Correções Aplicadas - Power BI Dashboard
 
 ## Problema Identificado
+
 Ao trocar de dashboard (ex: Fiscal → Comercial), o código anterior não estava sendo limpo completamente, causando **condições de corrida (race conditions)** e comportamento aleatório.
 
 ---
@@ -8,9 +9,11 @@ Ao trocar de dashboard (ex: Fiscal → Comercial), o código anterior não estav
 ## ✅ Correções Implementadas
 
 ### 1. **DashboardViewer.tsx - AbortController (CRÍTICO)**
+
 **Problema:** Requisições antigas continuavam rodando quando você trocava de dashboard
 
 **Solução:**
+
 ```typescript
 const abortController = new AbortController();
 const response = await apiFetch(url, { signal: abortController.signal });
@@ -21,9 +24,11 @@ const response = await apiFetch(url, { signal: abortController.signal });
 ---
 
 ### 2. **DashboardViewer.tsx - Limpeza Completa**
+
 **Problema:** O Power BI Service anterior não estava sendo destruído corretamente
 
 **Solução implementada:**
+
 - ✅ Remover todos os event listeners (`off("loaded")`, `off("error")`, etc)
 - ✅ Limpar container HTML completamente (não apenas `innerHTML = ""`)
 - ✅ Resetar Power BI Service antes de embutir novo relatório
@@ -34,9 +39,11 @@ const response = await apiFetch(url, { signal: abortController.signal });
 ---
 
 ### 3. **DashboardViewer.tsx - Nova Instância do Power BI Service**
+
 **Problema:** Reusava a mesma instância do Power BI Service
 
 **Solução:** Criar **NOVA** instância para cada dashboard
+
 ```typescript
 const powerBiClient = new pbi.service.Service(
   pbi.factories.hpmFactory,
@@ -50,9 +57,11 @@ const powerBiClient = new pbi.service.Service(
 ---
 
 ### 4. **DashboardViewer.tsx - Validação de Dados**
+
 **Problema:** Não validava se o report_id e dataset_id eram válidos
 
 **Solução:** Adicionar validação antes de fazer requisição
+
 ```typescript
 const validationErrors = validateDashboardData(dashboard);
 if (validationErrors.length > 0) {
@@ -65,9 +74,11 @@ if (validationErrors.length > 0) {
 ---
 
 ### 5. **DashboardViewer.tsx - Melhor Logging**
+
 **Problema:** Difícil debugar quando as coisas quebravam
 
 **Solução:** Logs estruturados em todas as etapas
+
 - 📊 Carregando dashboard
 - ✅ Token recebido
 - 🔧 Configuração pronta
@@ -77,7 +88,9 @@ if (validationErrors.length > 0) {
 ---
 
 ### 6. **BiPage.tsx - Logs de Transição**
+
 **Melhoria:** Agora mostra quando você troca de dashboard
+
 ```
 [BI] 🔄 Trocando dashboard...
 [BI] Dashboard anterior: Fiscal
@@ -89,7 +102,9 @@ if (validationErrors.length > 0) {
 ---
 
 ### 7. **useDashboards.ts - Logs Detalhados**
+
 **Melhoria:** Mostra exatamente quais dashboards foram carregados
+
 ```
 [BI] 📥 Buscando dashboards do banco de dados...
 [BI] ✅ 6 dashboards encontrados
@@ -101,9 +116,14 @@ if (validationErrors.length > 0) {
 ---
 
 ### 8. **dashboard-diagnostics.ts - Nova Ferramenta**
+
 **Novo arquivo** para diagnosticar problemas:
+
 ```typescript
-import { diagnostics, printTroubleshootingGuide } from "./utils/dashboard-diagnostics";
+import {
+  diagnostics,
+  printTroubleshootingGuide,
+} from "./utils/dashboard-diagnostics";
 
 // Abra o console e rode:
 printTroubleshootingGuide();
@@ -183,20 +203,22 @@ cleanupPreviousEmbed() - destroy Fiscal completamente
 Se ainda houver problemas:
 
 1. **Verifique o banco de dados:**
+
    ```sql
-   SELECT id, title, report_id, dataset_id, ativo 
-   FROM powerbi_dashboard 
+   SELECT id, title, report_id, dataset_id, ativo
+   FROM powerbi_dashboard
    WHERE ativo = 1;
    ```
 
 2. **Teste o endpoint de debug:**
+
    ```
    GET /api/powerbi/debug/workspace-access
    ```
 
 3. **Abra DevTools > Console e rode:**
    ```javascript
-   import { diagnostics } from '/src/pages/sectors/bi/utils/dashboard-diagnostics.ts';
+   import { diagnostics } from "/src/pages/sectors/bi/utils/dashboard-diagnostics.ts";
    console.log(diagnostics.getLogs());
    diagnostics.downloadDiagnostics();
    ```

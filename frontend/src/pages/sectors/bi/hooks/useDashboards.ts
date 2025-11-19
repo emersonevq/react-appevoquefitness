@@ -46,9 +46,7 @@ export function useDashboards() {
         const dashboards: Dashboard[] = await response.json();
 
         if (!Array.isArray(dashboards)) {
-          throw new Error(
-            "Resposta inválida: esperado array de dashboards",
-          );
+          throw new Error("Resposta inválida: esperado array de dashboards");
         }
 
         console.log(`[BI] ✅ ${dashboards.length} dashboards encontrados`);
@@ -84,7 +82,9 @@ export function useDashboards() {
           category.dashboards.sort((a, b) => a.order - b.order);
         });
 
-        console.log(`[BI] ✅ Dashboards organizados em ${grouped.length} categorias`);
+        console.log(
+          `[BI] ✅ Dashboards organizados em ${grouped.length} categorias`,
+        );
         setCategories(grouped);
       } catch (err) {
         const message =

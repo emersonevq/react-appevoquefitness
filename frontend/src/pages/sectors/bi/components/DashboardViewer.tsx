@@ -141,7 +141,10 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
 
           // Remover atributos customizados que o Power BI pode ter adicionado
           Array.from(embedContainerRef.current.attributes).forEach((attr) => {
-            if (attr.name.startsWith("data-") || attr.name.startsWith("aria-")) {
+            if (
+              attr.name.startsWith("data-") ||
+              attr.name.startsWith("aria-")
+            ) {
               embedContainerRef.current?.removeAttribute(attr.name);
             }
           });
@@ -157,7 +160,9 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
         try {
           // Setar como null para garbage collection
           powerBiClient = null;
-          console.log("[PowerBI] Instância anterior do Power BI Service destruída");
+          console.log(
+            "[PowerBI] Instância anterior do Power BI Service destruída",
+          );
         } catch (e) {
           console.warn("[PowerBI] Erro ao destruir Service:", e);
         }
@@ -199,7 +204,7 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
           `/powerbi/embed-token/${dashboard.report_id}?datasetId=${dashboard.dataset_id}`,
           {
             signal: abortController.signal,
-          }
+          },
         );
 
         if (!response.ok) {
@@ -228,7 +233,10 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
           // Log URL completa (importante para debug)
           console.log("embedUrl COMPLETA:", embedUrl);
           console.log("Válida (https):", embedUrl.startsWith("https://"));
-          console.log("Contém app.powerbi.com:", embedUrl.includes("app.powerbi.com"));
+          console.log(
+            "Contém app.powerbi.com:",
+            embedUrl.includes("app.powerbi.com"),
+          );
           console.log("Contém reportId:", embedUrl.includes("reportId"));
           console.log("Contém groupId:", embedUrl.includes("groupId"));
         }
@@ -241,7 +249,11 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
           );
         }
 
-        if (!embedUrl || typeof embedUrl !== "string" || embedUrl.trim().length === 0) {
+        if (
+          !embedUrl ||
+          typeof embedUrl !== "string" ||
+          embedUrl.trim().length === 0
+        ) {
           throw new Error(
             `embedUrl inválida: tipo=${typeof embedUrl}, length=${embedUrl?.length || 0}`,
           );
@@ -253,7 +265,11 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
         }
 
         // Validar URL ANTES de usar
-        if (!embedUrl || typeof embedUrl !== "string" || embedUrl.trim().length === 0) {
+        if (
+          !embedUrl ||
+          typeof embedUrl !== "string" ||
+          embedUrl.trim().length === 0
+        ) {
           throw new Error(
             `embedUrl inválida: tipo=${typeof embedUrl}, length=${embedUrl?.length || 0}`,
           );
@@ -301,8 +317,12 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
         console.log("[PowerBI] 🔧 Configuração do embed pronta");
 
         if (!embedContainerRef.current || !isMounted) {
-          console.log("[PowerBI] ❌ Container não disponível (null ou not mounted)");
-          throw new Error("embedContainerRef.current is null or component not mounted");
+          console.log(
+            "[PowerBI] ❌ Container não disponível (null ou not mounted)",
+          );
+          throw new Error(
+            "embedContainerRef.current is null or component not mounted",
+          );
         }
 
         // Verificar que o container existe no DOM
@@ -338,7 +358,9 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
         console.log("[PowerBI] 🚀 Chamando powerBiClient.embed()...");
         console.log("[PowerBI] embedContainerRef.current status:", {
           exists: !!embedContainerRef.current,
-          inDOM: embedContainerRef.current ? document.body.contains(embedContainerRef.current) : false,
+          inDOM: embedContainerRef.current
+            ? document.body.contains(embedContainerRef.current)
+            : false,
           children: embedContainerRef.current?.children.length || 0,
           clientRect: embedContainerRef.current?.getBoundingClientRect(),
         });
@@ -353,7 +375,9 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
           console.error("[PowerBI] ❌ Erro durante embed:", embedError);
           console.error("[PowerBI] embedContainerRef no momento do erro:", {
             exists: !!embedContainerRef.current,
-            inDOM: embedContainerRef.current ? document.body.contains(embedContainerRef.current) : false,
+            inDOM: embedContainerRef.current
+              ? document.body.contains(embedContainerRef.current)
+              : false,
           });
           throw new Error(
             `Erro ao chamar embed: ${embedError instanceof Error ? embedError.message : String(embedError)}`,
@@ -413,14 +437,13 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
         });
       } catch (err: any) {
         if (err.name === "AbortError") {
-          console.log(
-            "[PowerBI] ⏹️ Requisição cancelada (dashboard mudou)",
-          );
+          console.log("[PowerBI] ⏹️ Requisição cancelada (dashboard mudou)");
           return;
         }
 
         console.error("[PowerBI] ❌ Erro ao carregar:", err);
-        const errorMsg = err?.message || "Erro inesperado ao carregar dashboard";
+        const errorMsg =
+          err?.message || "Erro inesperado ao carregar dashboard";
 
         if (isMounted) {
           diagnostics.recordAttempt(

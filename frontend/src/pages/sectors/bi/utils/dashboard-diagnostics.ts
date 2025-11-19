@@ -164,14 +164,10 @@ export function printTroubleshootingGuide() {
   console.log("Database Checks:");
   troubleshootingChecklist.database.forEach((item) => console.log(item));
   console.log("\nPower BI Service Checks:");
-  troubleshootingChecklist.powerBiService.forEach((item) =>
-    console.log(item),
-  );
+  troubleshootingChecklist.powerBiService.forEach((item) => console.log(item));
   console.log("\nFrontend Checks:");
   troubleshootingChecklist.frontend.forEach((item) => console.log(item));
   console.log("\nNetwork Checks:");
-  troubleshootingChecklist.networkRequests.forEach((item) =>
-    console.log(item),
-  );
+  troubleshootingChecklist.networkRequests.forEach((item) => console.log(item));
   console.groupEnd();
 }
