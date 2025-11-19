@@ -678,8 +678,7 @@ export default function DashboardViewer({
             height: "100%",
             display: error ? "none" : "block",
             position: "relative",
-            overflow: "hidden",
-            backgroundColor: "#ffffff"
+            overflow: "visible"
           }}
         >
           <canvas
