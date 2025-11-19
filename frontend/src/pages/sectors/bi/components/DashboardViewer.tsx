@@ -107,18 +107,19 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
           throw new Error("Token ou embedUrl ausente");
         }
 
-        // Validate embedUrl format
-        if (!embedUrl.startsWith("https://")) {
-          throw new Error(`embedUrl inválida: ${embedUrl.substring(0, 100)}`);
+        // Validate embedUrl format with detailed diagnostics
+        const validation = validateEmbedUrl(embedUrl);
+
+        if (!validation.isValid) {
+          const errorMessage = `embedUrl inválida: ${validation.errors.join(", ")}`;
+          console.error("[PowerBI] Validation errors:", validation.errors);
+          console.error("[PowerBI] Full URL:", embedUrl);
+          throw new Error(errorMessage);
         }
 
-        if (!embedUrl.includes("reportId=")) {
-          throw new Error("embedUrl não contém reportId");
-        }
-
-        console.log("[PowerBI] embedUrl validada:", embedUrl.substring(0, 100) + "...");
-        console.log("[PowerBI] Tem groupId?", embedUrl.includes("groupId"));
-        console.log("[PowerBI] Tem config?", embedUrl.includes("config"));
+        // Log diagnostics
+        logEmbedUrlDiagnostics(embedUrl, "[PowerBI]");
+        console.log("[PowerBI] Metadata:", validation.metadata);
 
         const powerBiClient = new pbi.service.Service(
           pbi.factories.hpmFactory,
