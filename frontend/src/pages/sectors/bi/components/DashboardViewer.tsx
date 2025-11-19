@@ -257,6 +257,13 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
         report.on("loaded", () => {
           console.log("[PowerBI] ✅ Relatório carregado");
           if (isMounted) {
+            diagnostics.recordAttempt(
+              dashboard.title,
+              dashboard.report_id,
+              dashboard.dataset_id,
+              "✅ Token obtido com sucesso",
+              "✅ Embed URL válida",
+            );
             setIsLoading(false);
             setIsAuthenticating(false);
             triggerConfetti();
