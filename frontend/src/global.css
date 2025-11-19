@@ -547,7 +547,7 @@
   /* ===== CORREÇÕES DE VISIBILIDADE DOS BOTÕES ===== */
 
   /* Garantir que TODOS os botões sejam visíveis */
-  .bi-page-root * {
+  .bi-page-root {
     visibility: visible !important;
     opacity: 1 !important;
   }
