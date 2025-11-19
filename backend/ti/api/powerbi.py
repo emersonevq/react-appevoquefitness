@@ -143,35 +143,67 @@ async def get_embed_token(
         print(f"[POWERBI] [EMBED-TOKEN] Token URL: {token_url}")
 
         async with httpx.AsyncClient(timeout=60.0) as client:
-            # 3a. Primeiro, obter o embedUrl correto do relatório
+            # 3a. Obter o embedUrl correto do relatório (CRÍTICO - é obrigatório)
             embed_url_value = None
             try:
                 report_response = await client.get(
                     f"{POWERBI_API_URL}/groups/{POWERBI_WORKSPACE_ID}/reports/{report_id}",
                     headers=headers,
+                    timeout=20.0,
                 )
 
                 if report_response.status_code == 200:
                     report_data = report_response.json()
                     embed_url_value = report_data.get("embedUrl")
 
-                    if embed_url_value and isinstance(embed_url_value, str) and embed_url_value.startswith("https://"):
-                        print(f"[POWERBI] [EMBED-TOKEN] ✅ Embed URL obtida da API com sucesso")
-                        print(f"[POWERBI] [EMBED-TOKEN] URL: {embed_url_value[:100]}...")
+                    if embed_url_value and isinstance(embed_url_value, str):
+                        if embed_url_value.startswith("https://app.powerbi.com"):
+                            print(f"[POWERBI] [EMBED-TOKEN] ✅ Embed URL válida obtida da API")
+                        else:
+                            print(f"[POWERBI] [EMBED-TOKEN] ⚠️ embedUrl com hostname inesperado: {embed_url_value[:80]}")
+                            embed_url_value = None
                     else:
-                        print(f"[POWERBI] [EMBED-TOKEN] ⚠️ embedUrl inválida na resposta: {embed_url_value}")
+                        print(f"[POWERBI] [EMBED-TOKEN] ⚠️ embedUrl ausente ou inválida na resposta: {embed_url_value}")
                         embed_url_value = None
+                elif report_response.status_code == 401:
+                    print(f"[POWERBI] [EMBED-TOKEN] ❌ 401 Unauthorized - Service Principal sem acesso")
+                    raise HTTPException(
+                        status_code=401,
+                        detail="Service Principal não tem permissão para ler relatório"
+                    )
+                elif report_response.status_code == 403:
+                    print(f"[POWERBI] [EMBED-TOKEN] ❌ 403 Forbidden - Sem permissão")
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Service Principal não tem permissão para acessar este relatório"
+                    )
+                elif report_response.status_code == 404:
+                    print(f"[POWERBI] [EMBED-TOKEN] ❌ 404 Not Found - Relatório {report_id} não encontrado")
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Relatório {report_id} não encontrado no workspace"
+                    )
                 else:
-                    print(f"[POWERBI] [EMBED-TOKEN] ⚠️ Falha ao obter report details: {report_response.status_code}")
+                    print(f"[POWERBI] [EMBED-TOKEN] ⚠️ Erro ao obter report: {report_response.status_code}")
                     print(f"[POWERBI] [EMBED-TOKEN] Response: {report_response.text[:200]}")
+
+            except httpx.TimeoutException as e:
+                print(f"[POWERBI] [EMBED-TOKEN] ⚠️ Timeout ao obter report details: {e}")
+                embed_url_value = None
+            except HTTPException:
+                raise
             except Exception as e:
                 print(f"[POWERBI] [EMBED-TOKEN] ⚠️ Erro ao obter embedUrl: {e}")
+                embed_url_value = None
 
-            # Fallback: construir URL corretamente com groupId
+            # Se não conseguiu obter embedUrl, retornar erro
             if not embed_url_value:
-                print(f"[POWERBI] [EMBED-TOKEN] Usando embed URL fallback com groupId")
-                embed_url_value = f"https://app.powerbi.com/reportEmbed?reportId={report_id}&groupId={POWERBI_WORKSPACE_ID}&w=2"
-                print(f"[POWERBI] [EMBED-TOKEN] Fallback URL: {embed_url_value}")
+                error_msg = f"Não conseguiu obter embedUrl para relatório {report_id}. Verifique se o Service Principal tem permissão de leitura no workspace."
+                print(f"[POWERBI] [EMBED-TOKEN] ❌ ERRO CRÍTICO: {error_msg}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=error_msg
+                )
 
             # 3b. Gerar o token (aumentado timeout para 60s porque api.powerbi.com pode ser lenta)
             try:
@@ -198,7 +230,7 @@ async def get_embed_token(
 
                 if response.status_code == 403:
                     print(f"\n[POWERBI] [EMBED-TOKEN] ❌ ERRO 403 - DIAGNÓSTICO:")
-                    print(f"  1. Service Principal está no workspace como Membro/Admin?")
+                    print(f"  1. Service Principal est�� no workspace como Membro/Admin?")
                     print(f"     → Workspace ID: {POWERBI_WORKSPACE_ID}")
                     print(f"  2. Report ID está correto?")
                     print(f"     → Report ID: {report_id}")
