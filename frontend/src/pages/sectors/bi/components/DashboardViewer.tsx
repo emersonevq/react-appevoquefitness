@@ -301,14 +301,22 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
         console.log("[PowerBI] 🔧 Configuração do embed pronta");
 
         if (!embedContainerRef.current || !isMounted) {
-          console.log("[PowerBI] Container não disponível, abortando");
-          return;
+          console.log("[PowerBI] ❌ Container não disponível (null ou not mounted)");
+          throw new Error("embedContainerRef.current is null or component not mounted");
+        }
+
+        // Verificar que o container existe no DOM
+        if (!document.body.contains(embedContainerRef.current)) {
+          console.log("[PowerBI] ❌ Container não está no DOM");
+          throw new Error("embedContainerRef.current is not in the DOM");
         }
 
         // IMPORTANTE: Verificar que o container está vazio ANTES de resetar
         console.log(
           "[PowerBI] Container estado antes de reset - Children count:",
           embedContainerRef.current.children.length,
+          "- offsetHeight:",
+          embedContainerRef.current.offsetHeight,
         );
 
         // Resetar container e criar novo embed
