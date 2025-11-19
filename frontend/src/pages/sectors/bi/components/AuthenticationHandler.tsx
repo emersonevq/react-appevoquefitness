@@ -86,15 +86,6 @@ export default function AuthenticationHandler({
           </div>
         )}
 
-        {status === "success" && (
-          <div className="flex flex-col items-center gap-4">
-            <div className="text-4xl">🎉</div>
-            <p className="text-base text-foreground font-medium">
-              Você está logado no portal de BI!
-            </p>
-          </div>
-        )}
-
         {status === "error" && (
           <div className="flex flex-col items-center gap-4">
             <div className="text-4xl">⚠️</div>
