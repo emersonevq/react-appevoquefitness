@@ -199,7 +199,7 @@ export default function DashboardViewer({ dashboard }: DashboardViewerProps) {
     return () => {
       isMounted = false;
     };
-  }, [dashboard.reportId, dashboard.datasetId]);
+  }, [dashboard.report_id, dashboard.dataset_id]);
 
   // Fullscreen sync
   useEffect(() => {
