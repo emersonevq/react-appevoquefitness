@@ -663,7 +663,10 @@ export function Permissoes() {
 
       // Dispatch event to notify other listeners
       // For the user being edited, only dispatch once to avoid refresh loops
-      console.log("[ADMIN] Dispatching permission update event for user", editing.id);
+      console.log(
+        "[ADMIN] Dispatching permission update event for user",
+        editing.id,
+      );
       window.dispatchEvent(
         new CustomEvent("user:updated", {
           detail: { user_id: editing.id, type: "permissions_changed" },
