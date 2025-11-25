@@ -127,9 +127,15 @@ def _set_setores(user: User, setores):
 
 
 def _set_bi_subcategories(user: User, bi_subcategories):
+    print(f"[_set_bi_subcategories] Called with: {bi_subcategories}")
+    print(f"[_set_bi_subcategories] Type: {type(bi_subcategories)}")
+
     if bi_subcategories and isinstance(bi_subcategories, list) and len(bi_subcategories) > 0:
-        user._bi_subcategories = json.dumps(bi_subcategories)
+        json_str = json.dumps(bi_subcategories)
+        print(f"[_set_bi_subcategories] Setting _bi_subcategories to: {json_str}")
+        user._bi_subcategories = json_str
     else:
+        print(f"[_set_bi_subcategories] Setting _bi_subcategories to None")
         user._bi_subcategories = None
 
 
