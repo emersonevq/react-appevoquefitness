@@ -194,6 +194,10 @@ def atualizar_usuario(user_id: int, payload: dict, db: Session = Depends(get_db)
         print(f"[API] User updated successfully, new setores={getattr(updated, '_setores', 'N/A')}")
         print(f"[API] User updated successfully, new _bi_subcategories={getattr(updated, '_bi_subcategories', 'N/A')}")
 
+        # Verify what was actually saved to the database
+        db.refresh(updated)
+        print(f"[API] After refresh from DB, _bi_subcategories={getattr(updated, '_bi_subcategories', 'N/A')}")
+
         # Notify the specific user their permissions/profile changed
         try:
             from core.realtime import emit_refresh_sync
