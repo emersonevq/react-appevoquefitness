@@ -186,8 +186,13 @@ def atualizar_usuario(user_id: int, payload: dict, db: Session = Depends(get_db)
     try:
         import json
         print(f"[API] atualizar_usuario called for user_id={user_id}, payload keys={list(payload.keys())}")
+        print(f"[API] Full payload: {json.dumps(payload, default=str)}")
+        if "bi_subcategories" in payload:
+            print(f"[API] bi_subcategories in payload: {payload['bi_subcategories']}")
+
         updated = update_user(db, user_id, payload)
         print(f"[API] User updated successfully, new setores={getattr(updated, '_setores', 'N/A')}")
+        print(f"[API] User updated successfully, new _bi_subcategories={getattr(updated, '_bi_subcategories', 'N/A')}")
 
         # Notify the specific user their permissions/profile changed
         try:
