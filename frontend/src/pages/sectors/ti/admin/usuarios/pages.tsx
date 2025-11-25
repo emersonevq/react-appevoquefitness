@@ -46,6 +46,7 @@ export function CriarUsuario() {
   const [username, setUsername] = useState("");
   const [level, setLevel] = useState("Funcionário");
   const [selSectors, setSelSectors] = useState<string[]>([]);
+  const [selBiSubcategories, setSelBiSubcategories] = useState<string[]>([]);
   const [forceReset, setForceReset] = useState(true);
 
   const [emailTaken, setEmailTaken] = useState<boolean | null>(null);
@@ -63,6 +64,8 @@ export function CriarUsuario() {
   } | null>(null);
 
   const allSectors = useMemo(() => sectors.map((s) => s.title), []);
+  const biSector = useMemo(() => sectors.find((s) => s.slug === "bi"), []);
+  const isBiSelected = selSectors.includes(normalize("Portal de BI"));
 
   const generateUsername = () => {
     const base = (first + "." + last).trim().toLowerCase().replace(/\s+/g, ".");
@@ -74,6 +77,17 @@ export function CriarUsuario() {
     const key = normalize(name);
     setSelSectors((prev) =>
       prev.includes(key) ? prev.filter((n) => n !== key) : [...prev, key],
+    );
+    if (name === "Portal de BI" && !isBiSelected) {
+      setSelBiSubcategories([]);
+    }
+  };
+
+  const toggleBiSubcategory = (subcategory: string) => {
+    setSelBiSubcategories((prev) =>
+      prev.includes(subcategory)
+        ? prev.filter((s) => s !== subcategory)
+        : [...prev, subcategory],
     );
   };
 
@@ -178,6 +192,7 @@ export function CriarUsuario() {
       setUsername("");
       setLevel("Funcionário");
       setSelSectors([]);
+      setSelBiSubcategories([]);
       setForceReset(true);
       setEmailTaken(null);
       setUsernameTaken(null);
