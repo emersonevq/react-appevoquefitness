@@ -121,6 +121,13 @@ def _set_setores(user: User, setores):
         user.setor = None
 
 
+def _set_bi_subcategories(user: User, bi_subcategories):
+    if bi_subcategories and isinstance(bi_subcategories, list) and len(bi_subcategories) > 0:
+        user._bi_subcategories = json.dumps(bi_subcategories)
+    else:
+        user._bi_subcategories = None
+
+
 
 
 def update_user(db: Session, user_id: int, data: dict) -> User:
