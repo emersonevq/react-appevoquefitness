@@ -628,13 +628,16 @@ export function Permissoes() {
       usuario: editUsuario,
       nivel_acesso: editNivel,
       setores: editSetores,
-      bi_subcategories: editBiSubcategories.length
-        ? editBiSubcategories
-        : null,
+      bi_subcategories: editBiSubcategories.length ? editBiSubcategories : null,
       alterar_senha_primeiro_acesso: editForceReset,
     };
 
-    console.log("[ADMIN] Salvando usuário", editing.id, "com payload:", payload);
+    console.log(
+      "[ADMIN] Salvando usuário",
+      editing.id,
+      "com payload:",
+      payload,
+    );
 
     const res = await fetch(`/api/usuarios/${editing.id}`, {
       method: "PUT",
@@ -647,7 +650,10 @@ export function Permissoes() {
     if (res.ok) {
       const responseData = await res.json();
       console.log("[ADMIN] User updated successfully, response:", responseData);
-      console.log("[ADMIN] bi_subcategories saved as:", responseData.bi_subcategories);
+      console.log(
+        "[ADMIN] bi_subcategories saved as:",
+        responseData.bi_subcategories,
+      );
       setEditing(null);
       load();
 
@@ -902,12 +908,18 @@ export function Permissoes() {
                           <input
                             type="checkbox"
                             className="h-4 w-4 rounded border-border bg-background"
-                            checked={editBiSubcategories.includes(sub.dashboard_id)}
-                            onChange={() => toggleEditBiSubcategory(sub.dashboard_id)}
+                            checked={editBiSubcategories.includes(
+                              sub.dashboard_id,
+                            )}
+                            onChange={() =>
+                              toggleEditBiSubcategory(sub.dashboard_id)
+                            }
                           />
                           <div>
                             <div className="font-medium">{sub.title}</div>
-                            <div className="text-xs text-muted-foreground">ID: {sub.dashboard_id}</div>
+                            <div className="text-xs text-muted-foreground">
+                              ID: {sub.dashboard_id}
+                            </div>
                           </div>
                         </label>
                       ))}

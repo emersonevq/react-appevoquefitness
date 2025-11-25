@@ -356,7 +356,9 @@ export function useAuth() {
           name: `${data.nome} ${data.sobrenome}`,
           nivel_acesso: data.nivel_acesso,
           setores: newSetores,
-          bi_subcategories: Array.isArray(data.bi_subcategories) ? data.bi_subcategories : null,
+          bi_subcategories: Array.isArray(data.bi_subcategories)
+            ? data.bi_subcategories
+            : null,
           loginTime: now,
           alterar_senha_primeiro_acesso: !!data.alterar_senha_primeiro_acesso,
         };
@@ -502,7 +504,9 @@ export function useAuth() {
         name: `${data.nome} ${data.sobrenome}`,
         nivel_acesso: data.nivel_acesso,
         setores: Array.isArray(data.setores) ? data.setores : [],
-        bi_subcategories: Array.isArray(data.bi_subcategories) ? data.bi_subcategories : null,
+        bi_subcategories: Array.isArray(data.bi_subcategories)
+          ? data.bi_subcategories
+          : null,
         loginTime: now,
         // include flag
         alterar_senha_primeiro_acesso: !!data.alterar_senha_primeiro_acesso,
