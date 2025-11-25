@@ -280,6 +280,15 @@ def authenticate_user(db: Session, identifier: str, senha: str) -> dict:
     except Exception:
         pass
 
+    # Prepare bi_subcategories list
+    bi_subcategories_list = None
+    try:
+        if user._bi_subcategories:
+            raw = json.loads(user._bi_subcategories)
+            bi_subcategories_list = [str(x) if x is not None else "" for x in raw]
+    except Exception:
+        bi_subcategories_list = None
+
     return {
         "id": user.id,
         "nome": user.nome,
@@ -288,6 +297,7 @@ def authenticate_user(db: Session, identifier: str, senha: str) -> dict:
         "email": user.email,
         "nivel_acesso": user.nivel_acesso,
         "setores": setores_list,
+        "bi_subcategories": bi_subcategories_list,
         "alterar_senha_primeiro_acesso": bool(user.alterar_senha_primeiro_acesso),
         "session_revoked_at": user.session_revoked_at.isoformat() if getattr(user, 'session_revoked_at', None) else None,
     }
