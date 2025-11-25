@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { usuariosMock } from "../mock";
-import { sectors } from "@/data/sectors";
+import { sectors, loadBISubcategories } from "@/data/sectors";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -62,10 +62,15 @@ export function CriarUsuario() {
     senha: string;
     nome: string;
   } | null>(null);
+  const [biSubcategories, setBiSubcategories] = useState<string[]>([]);
 
   const allSectors = useMemo(() => sectors.map((s) => s.title), []);
   const biSector = useMemo(() => sectors.find((s) => s.slug === "bi"), []);
   const isBiSelected = selSectors.includes(normalize("Portal de BI"));
+
+  useEffect(() => {
+    loadBISubcategories().then(setBiSubcategories);
+  }, []);
 
   const generateUsername = () => {
     const base = (first + "." + last).trim().toLowerCase().replace(/\s+/g, ".");
@@ -320,31 +325,26 @@ export function CriarUsuario() {
                 </label>
               ))}
             </div>
-            {isBiSelected &&
-              biSector?.subcategories &&
-              biSector.subcategories.length > 0 && (
-                <div className="mt-3">
-                  <div className="text-xs font-medium text-muted-foreground mb-2">
-                    Dashboards do Portal de BI
-                  </div>
-                  <div className="rounded-md border border-border/40 p-3 grid grid-cols-1 gap-2 text-sm bg-muted/30">
-                    {biSector.subcategories.map((sub) => (
-                      <label
-                        key={sub}
-                        className="inline-flex items-center gap-2"
-                      >
-                        <input
-                          type="checkbox"
-                          className="h-4 w-4 rounded border-border bg-background"
-                          checked={selBiSubcategories.includes(sub)}
-                          onChange={() => toggleBiSubcategory(sub)}
-                        />
-                        {sub}
-                      </label>
-                    ))}
-                  </div>
+            {isBiSelected && biSubcategories.length > 0 && (
+              <div className="mt-3">
+                <div className="text-xs font-medium text-muted-foreground mb-2">
+                  Dashboards do Portal de BI
                 </div>
-              )}
+                <div className="rounded-md border border-border/40 p-3 grid grid-cols-1 gap-2 text-sm bg-muted/30">
+                  {biSubcategories.map((sub) => (
+                    <label key={sub} className="inline-flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-border bg-background"
+                        checked={selBiSubcategories.includes(sub)}
+                        onChange={() => toggleBiSubcategory(sub)}
+                      />
+                      {sub}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -556,6 +556,7 @@ export function Permissoes() {
   const [editSetores, setEditSetores] = useState<string[]>([]);
   const [editBiSubcategories, setEditBiSubcategories] = useState<string[]>([]);
   const [editForceReset, setEditForceReset] = useState<boolean>(false);
+  const [biSubcategories, setBiSubcategories] = useState<string[]>([]);
 
   const allSectors = useMemo(() => sectors.map((s) => s.title), []);
   const biSector = useMemo(() => sectors.find((s) => s.slug === "bi"), []);
@@ -589,6 +590,10 @@ export function Permissoes() {
       .catch(() => setUsers([]))
       .finally(() => setLoading(false));
   };
+
+  useEffect(() => {
+    loadBISubcategories().then(setBiSubcategories);
+  }, []);
 
   useEffect(() => {
     load();
@@ -873,31 +878,29 @@ export function Permissoes() {
                     </label>
                   ))}
                 </div>
-                {isEditBiSelected &&
-                  biSector?.subcategories &&
-                  biSector.subcategories.length > 0 && (
-                    <div className="mt-3">
-                      <div className="text-xs font-medium text-muted-foreground mb-2">
-                        Dashboards do Portal de BI
-                      </div>
-                      <div className="rounded-md border border-border/40 p-3 grid grid-cols-1 gap-2 text-sm bg-muted/30">
-                        {biSector.subcategories.map((sub) => (
-                          <label
-                            key={sub}
-                            className="inline-flex items-center gap-2"
-                          >
-                            <input
-                              type="checkbox"
-                              className="h-4 w-4 rounded border-border bg-background"
-                              checked={editBiSubcategories.includes(sub)}
-                              onChange={() => toggleEditBiSubcategory(sub)}
-                            />
-                            {sub}
-                          </label>
-                        ))}
-                      </div>
+                {isEditBiSelected && biSubcategories.length > 0 && (
+                  <div className="mt-3">
+                    <div className="text-xs font-medium text-muted-foreground mb-2">
+                      Dashboards do Portal de BI
                     </div>
-                  )}
+                    <div className="rounded-md border border-border/40 p-3 grid grid-cols-1 gap-2 text-sm bg-muted/30">
+                      {biSubcategories.map((sub) => (
+                        <label
+                          key={sub}
+                          className="inline-flex items-center gap-2"
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-border bg-background"
+                            checked={editBiSubcategories.includes(sub)}
+                            onChange={() => toggleEditBiSubcategory(sub)}
+                          />
+                          {sub}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
             <label className="inline-flex items-center gap-2 text-sm">

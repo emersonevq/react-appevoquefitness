@@ -68,6 +68,10 @@ def criar_usuario(db: Session, payload: UserCreate) -> UserCreatedOut:
         setores_json = json.dumps(normalized)
         setor = normalized[0]
 
+    bi_subcategories_json = None
+    if payload.bi_subcategories and len(payload.bi_subcategories) > 0:
+        bi_subcategories_json = json.dumps(payload.bi_subcategories)
+
     novo = User(
         nome=payload.nome,
         sobrenome=payload.sobrenome,
@@ -78,6 +82,7 @@ def criar_usuario(db: Session, payload: UserCreate) -> UserCreatedOut:
         nivel_acesso=payload.nivel_acesso,
         setor=setor,
         _setores=setores_json,
+        _bi_subcategories=bi_subcategories_json,
         bloqueado=payload.bloqueado,
     )
     db.add(novo)
@@ -121,6 +126,13 @@ def _set_setores(user: User, setores):
         user.setor = None
 
 
+def _set_bi_subcategories(user: User, bi_subcategories):
+    if bi_subcategories and isinstance(bi_subcategories, list) and len(bi_subcategories) > 0:
+        user._bi_subcategories = json.dumps(bi_subcategories)
+    else:
+        user._bi_subcategories = None
+
+
 
 
 def update_user(db: Session, user_id: int, data: dict) -> User:
@@ -153,6 +165,8 @@ def update_user(db: Session, user_id: int, data: dict) -> User:
         user.bloqueado = bool(data["bloqueado"])  # type: ignore
     if "setores" in data:
         _set_setores(user, data["setores"])  # type: ignore
+    if "bi_subcategories" in data:
+        _set_bi_subcategories(user, data["bi_subcategories"])  # type: ignore
 
     db.commit()
     db.refresh(user)
