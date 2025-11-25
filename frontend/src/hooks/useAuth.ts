@@ -52,6 +52,7 @@ function readFromStorage(): AuthUser | null {
             loginTime,
             nivel_acesso,
             setores,
+            bi_subcategories,
             alterar_senha_primeiro_acesso,
             id,
           } = data as AuthRecord & Partial<AuthUser>;
@@ -62,6 +63,7 @@ function readFromStorage(): AuthUser | null {
             loginTime,
             nivel_acesso,
             setores,
+            bi_subcategories,
             alterar_senha_primeiro_acesso,
           } as AuthUser;
         }
@@ -75,6 +77,7 @@ function readFromStorage(): AuthUser | null {
             loginTime,
             nivel_acesso,
             setores,
+            bi_subcategories,
             alterar_senha_primeiro_acesso,
             id,
           } = data as AuthUser & Partial<AuthRecord>;
@@ -85,6 +88,7 @@ function readFromStorage(): AuthUser | null {
             loginTime,
             nivel_acesso,
             setores,
+            bi_subcategories,
             alterar_senha_primeiro_acesso,
           } as AuthUser;
         }
@@ -113,6 +117,7 @@ function readFromStorage(): AuthUser | null {
             loginTime,
             nivel_acesso,
             setores,
+            bi_subcategories,
             alterar_senha_primeiro_acesso,
             id,
           } = data as AuthRecord & Partial<AuthUser>;
@@ -123,6 +128,7 @@ function readFromStorage(): AuthUser | null {
             loginTime,
             nivel_acesso,
             setores,
+            bi_subcategories,
             alterar_senha_primeiro_acesso,
           } as AuthUser;
         }
@@ -136,6 +142,7 @@ function readFromStorage(): AuthUser | null {
             loginTime,
             nivel_acesso,
             setores,
+            bi_subcategories,
             alterar_senha_primeiro_acesso,
             id,
           } = data as AuthUser & Partial<AuthRecord>;
@@ -146,6 +153,7 @@ function readFromStorage(): AuthUser | null {
             loginTime,
             nivel_acesso,
             setores,
+            bi_subcategories,
             alterar_senha_primeiro_acesso,
           } as AuthUser;
         }
