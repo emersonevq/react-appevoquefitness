@@ -119,12 +119,12 @@ class SLACalculator:
             historico = db.query(HistoricoStatus).filter(
                 and_(
                     HistoricoStatus.chamado_id == chamado_id,
-                    HistoricoStatus.status_novo.in_(["Em Atendimento", "Em análise"])
+                    HistoricoStatus.status.in_(["Em Atendimento", "Em análise", "Em andamento"])
                 )
-            ).order_by(HistoricoStatus.data_acao.asc()).first()
+            ).order_by(HistoricoStatus.data_inicio.asc()).first()
 
-            if historico and historico.data_acao:
-                return historico.data_acao
+            if historico and historico.data_inicio:
+                return historico.data_inicio
         except Exception:
             pass
         return None
@@ -139,12 +139,12 @@ class SLACalculator:
             historico = db.query(HistoricoStatus).filter(
                 and_(
                     HistoricoStatus.chamado_id == chamado_id,
-                    HistoricoStatus.status_novo.in_(["Concluído", "Concluido"])
+                    HistoricoStatus.status.in_(["Concluído", "Concluido"])
                 )
-            ).order_by(HistoricoStatus.data_acao.asc()).first()
+            ).order_by(HistoricoStatus.data_inicio.asc()).first()
 
-            if historico and historico.data_acao:
-                return historico.data_acao
+            if historico and historico.data_inicio:
+                return historico.data_inicio
         except Exception:
             pass
         return None
@@ -162,14 +162,14 @@ class SLACalculator:
             # Pega o último status registrado
             ultimo_status = db.query(HistoricoStatus).filter(
                 HistoricoStatus.chamado_id == chamado_id
-            ).order_by(HistoricoStatus.data_acao.desc()).first()
+            ).order_by(HistoricoStatus.data_inicio.desc()).first()
 
             if not ultimo_status:
                 return False
 
             # Verifica se o último status é "Aguardando" ou "Em análise"
-            status_novo = ultimo_status.status_novo or ""
-            if status_novo not in ["Aguardando", "Em análise"]:
+            status_atual = ultimo_status.status or ""
+            if status_atual not in ["Aguardando", "Em análise"]:
                 return False
 
             return True

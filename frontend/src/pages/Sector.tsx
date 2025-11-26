@@ -18,8 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuthContext } from "@/lib/auth-context";
+import { TIDashboard } from "@/components/ti-dashboard/TIDashboard";
 
 interface Ticket {
   id: string;
@@ -158,104 +159,132 @@ export default function SectorPage() {
     );
   }
 
+  // Check TI sector access
+  if (!hasAccess()) {
+    return (
+      <Layout>
+        {header}
+        <section className="container py-8">
+          <div className="rounded-xl border border-border/60 bg-card p-6 sm:p-8 text-center">
+            <h2 className="text-lg font-semibold mb-2">Acesso negado</h2>
+            <p className="text-muted-foreground mb-4">
+              Você não tem permissão para acessar o setor de TI.
+            </p>
+            <div className="mt-6 flex items-center gap-3 justify-center">
+              <Button asChild>
+                <Link to="/">Voltar ao início</Link>
+              </Button>
+            </div>
+          </div>
+        </section>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       {header}
-      <section className="container py-8">
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="text-lg sm:text-xl font-semibold">
-            Histórico de chamados
-          </h2>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button className="rounded-full">Abrir novo chamado</Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-xl">
-              <DialogHeader>
-                <DialogTitle>Abrir chamado</DialogTitle>
-              </DialogHeader>
-              <TicketForm
-                onSubmit={(payload) => {
-                  const now = new Date();
-                  setTickets((prev) => {
-                    const id = Math.random()
-                      .toString(36)
-                      .slice(2, 8)
-                      .toUpperCase();
-                    const ymd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
-                    const seq =
-                      prev.filter((t) => t.protocolo.startsWith(`${ymd}-`))
-                        .length + 1;
-                    const protocolo = `${ymd}-${seq}`;
-                    let maxCode = 0;
-                    for (const t of prev) {
-                      const m = /^EVQ-(\d{4})$/.exec(t.codigo);
-                      if (m) {
-                        const n = parseInt(m[1], 10);
-                        if (!Number.isNaN(n) && n > maxCode) maxCode = n;
-                      }
-                    }
-                    const nextNum = Math.max(maxCode + 1, 81);
-                    const codigo = `EVQ-${String(nextNum).padStart(4, "0")}`;
-                    const novo: Ticket = {
-                      id,
-                      codigo,
-                      protocolo,
-                      data: now.toISOString().slice(0, 10),
-                      problema: payload.problema,
-                      status: "Aberto",
-                    };
-                    return [novo, ...prev];
-                  });
-                  setOpen(false);
-                }}
-              />
-            </DialogContent>
-          </Dialog>
-        </div>
+      <section className="container py-8 space-y-8">
+        {/* TI Dashboard */}
+        <TIDashboard />
 
-        <div className="mt-4 overflow-x-auto rounded-xl border border-border/60 bg-card">
-          <table className="w-full min-w-[720px] text-sm">
-            <thead>
-              <tr className="text-left">
-                <th className="px-4 py-3 font-semibold">Código</th>
-                <th className="px-4 py-3 font-semibold">Protocolo</th>
-                <th className="px-4 py-3 font-semibold">Data</th>
-                <th className="px-4 py-3 font-semibold">Problema</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 font-semibold">Ações</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tickets.length === 0 ? (
-                <tr>
-                  <td
-                    className="px-4 py-6 text-center text-muted-foreground"
-                    colSpan={6}
-                  >
-                    Você ainda não abriu nenhum chamado.
-                  </td>
+        {/* Histórico de chamados */}
+        <div>
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <h2 className="text-lg sm:text-xl font-semibold">
+              Histórico de chamados
+            </h2>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button className="rounded-full">Abrir novo chamado</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-xl">
+                <DialogHeader>
+                  <DialogTitle>Abrir chamado</DialogTitle>
+                </DialogHeader>
+                <TicketForm
+                  onSubmit={(payload) => {
+                    const now = new Date();
+                    setTickets((prev) => {
+                      const id = Math.random()
+                        .toString(36)
+                        .slice(2, 8)
+                        .toUpperCase();
+                      const ymd = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`;
+                      const seq =
+                        prev.filter((t) => t.protocolo.startsWith(`${ymd}-`))
+                          .length + 1;
+                      const protocolo = `${ymd}-${seq}`;
+                      let maxCode = 0;
+                      for (const t of prev) {
+                        const m = /^EVQ-(\d{4})$/.exec(t.codigo);
+                        if (m) {
+                          const n = parseInt(m[1], 10);
+                          if (!Number.isNaN(n) && n > maxCode) maxCode = n;
+                        }
+                      }
+                      const nextNum = Math.max(maxCode + 1, 81);
+                      const codigo = `EVQ-${String(nextNum).padStart(4, "0")}`;
+                      const novo: Ticket = {
+                        id,
+                        codigo,
+                        protocolo,
+                        data: now.toISOString().slice(0, 10),
+                        problema: payload.problema,
+                        status: "Aberto",
+                      };
+                      return [novo, ...prev];
+                    });
+                    setOpen(false);
+                  }}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-border/60 bg-card">
+            <table className="w-full min-w-[720px] text-sm">
+              <thead>
+                <tr className="text-left">
+                  <th className="px-4 py-3 font-semibold">Código</th>
+                  <th className="px-4 py-3 font-semibold">Protocolo</th>
+                  <th className="px-4 py-3 font-semibold">Data</th>
+                  <th className="px-4 py-3 font-semibold">Problema</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Ações</th>
                 </tr>
-              ) : (
-                tickets.map((t) => (
-                  <tr key={t.id} className="border-t border-border/60">
-                    <td className="px-4 py-3">{t.codigo}</td>
-                    <td className="px-4 py-3">{t.protocolo}</td>
-                    <td className="px-4 py-3">
-                      {new Date(t.data).toLocaleDateString()}
-                    </td>
-                    <td className="px-4 py-3">{t.problema}</td>
-                    <td className="px-4 py-3">{t.status}</td>
-                    <td className="px-4 py-3">
-                      <Button variant="secondary" size="sm">
-                        Ver
-                      </Button>
+              </thead>
+              <tbody>
+                {tickets.length === 0 ? (
+                  <tr>
+                    <td
+                      className="px-4 py-6 text-center text-muted-foreground"
+                      colSpan={6}
+                    >
+                      Você ainda não abriu nenhum chamado.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+                ) : (
+                  tickets.map((t) => (
+                    <tr key={t.id} className="border-t border-border/60">
+                      <td className="px-4 py-3">{t.codigo}</td>
+                      <td className="px-4 py-3">{t.protocolo}</td>
+                      <td className="px-4 py-3">
+                        {new Date(t.data).toLocaleDateString()}
+                      </td>
+                      <td className="px-4 py-3">{t.problema}</td>
+                      <td className="px-4 py-3">{t.status}</td>
+                      <td className="px-4 py-3">
+                        <Button variant="secondary" size="sm">
+                          Ver
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
     </Layout>
