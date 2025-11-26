@@ -155,8 +155,9 @@ class MetricsCalculator:
 
     @staticmethod
     def get_tempo_medio_resposta_24h(db: Session) -> str:
-        """Calcula tempo médio de PRIMEIRA resposta das últimas 24h em horas de negócio"""
+        """Calcula tempo médio de PRIMEIRA resposta das últimas 24h em horas de negócio - OTIMIZADO"""
         from ti.services.sla import SLACalculator
+        from ti.models.sla_config import SLABusinessHours
 
         agora = now_brazil_naive()
         ontem = agora - timedelta(hours=24)
@@ -174,13 +175,28 @@ class MetricsCalculator:
             if not chamados:
                 return "—"
 
+            # PRÉ-CARREGAR business hours de uma vez
+            business_hours_cache = {}
+            for weekday in range(5):
+                bh_result = db.query(SLABusinessHours).filter(
+                    and_(
+                        SLABusinessHours.dia_semana == weekday,
+                        SLABusinessHours.ativo == True
+                    )
+                ).first()
+                if bh_result:
+                    business_hours_cache[weekday] = (bh_result.hora_inicio, bh_result.hora_fim)
+                else:
+                    business_hours_cache[weekday] = SLACalculator.DEFAULT_BUSINESS_HOURS.get(weekday)
+
             tempos = []
             for chamado in chamados:
                 if chamado.data_primeira_resposta and chamado.data_abertura:
                     horas = SLACalculator.calculate_business_hours(
                         chamado.data_abertura,
                         chamado.data_primeira_resposta,
-                        db
+                        db,
+                        business_hours_cache
                     )
                     if 0 <= horas <= 72:
                         tempos.append(horas)
