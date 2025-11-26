@@ -160,15 +160,16 @@ export default function Overview() {
     gcTime: 120 * 60 * 1000, // 120 minutos (cache persistence)
   });
 
-  const { data: performanceMetricsData, isLoading: performanceLoading } = useQuery({
-    queryKey: ["metrics-performance"],
-    queryFn: async () => {
-      const response = await api.get("/metrics/performance");
-      return response.data;
-    },
-    staleTime: 15 * 60 * 1000,
-    gcTime: 60 * 60 * 1000,
-  });
+  const { data: performanceMetricsData, isLoading: performanceLoading } =
+    useQuery({
+      queryKey: ["metrics-performance"],
+      queryFn: async () => {
+        const response = await api.get("/metrics/performance");
+        return response.data;
+      },
+      staleTime: 15 * 60 * 1000,
+      gcTime: 60 * 60 * 1000,
+    });
 
   // Atualiza estado local quando dados do React Query chegam
   useEffect(() => {
@@ -231,9 +232,20 @@ export default function Overview() {
 
   // Determina se está carregando
   useEffect(() => {
-    const allLoading = basicLoading || dailyLoading || weeklyLoading || slaLoading || performanceLoading;
+    const allLoading =
+      basicLoading ||
+      dailyLoading ||
+      weeklyLoading ||
+      slaLoading ||
+      performanceLoading;
     setIsLoading(allLoading);
-  }, [basicLoading, dailyLoading, weeklyLoading, slaLoading, performanceLoading]);
+  }, [
+    basicLoading,
+    dailyLoading,
+    weeklyLoading,
+    slaLoading,
+    performanceLoading,
+  ]);
 
   if (isLoading) {
     return (
