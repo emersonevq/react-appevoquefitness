@@ -228,3 +228,37 @@ def debug_tempo_resposta(periodo: str = "mes", db: Session = Depends(get_db)):
             "erro": str(e),
             "periodo": periodo
         }
+
+
+@router.post("/metrics/debug/recalculate-sla")
+def debug_recalculate_sla(db: Session = Depends(get_db)):
+    """
+    Debug: força recálculo de todas as métricas de SLA
+    Útil para verificar se há problemas nos cálculos
+    """
+    try:
+        from ti.services.sla_cache import SLACacheManager
+
+        # Invalida todos os caches
+        SLACacheManager.invalidate_all_sla(db)
+
+        # Recalcula
+        sla_24h = MetricsCalculator.get_sla_compliance_24h(db)
+        sla_mes = MetricsCalculator.get_sla_compliance_mes(db)
+        sla_dist = MetricsCalculator.get_sla_distribution(db)
+
+        return {
+            "status": "ok",
+            "sla_compliance_24h": sla_24h,
+            "sla_compliance_mes": sla_mes,
+            "sla_distribution": sla_dist,
+            "timestamp": str(MetricsCalculator.get_abertos_agora.__self__.get_abertos_agora(db))
+        }
+    except Exception as e:
+        print(f"Erro ao recalcular SLA: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            "status": "erro",
+            "erro": str(e)
+        }
