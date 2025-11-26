@@ -90,65 +90,80 @@ class MetricsCalculator:
 
     @staticmethod
     def get_tempo_medio_resposta_mes(db: Session) -> tuple[str, int]:
-        """Calcula tempo médio de resposta deste mês e retorna também a contagem de chamados abertos neste mês"""
+        """Calcula tempo médio de PRIMEIRA resposta deste mês"""
         agora = now_brazil_naive()
-        # Primeiro dia do mês atual
         mes_inicio = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
         try:
-            # Busca todos os chamados abertos neste mês
-            chamados_mes = db.query(Chamado).filter(
+            # Conta chamados do mês
+            total_chamados_mes = db.query(Chamado).filter(
                 and_(
                     Chamado.data_abertura >= mes_inicio,
                     Chamado.data_abertura <= agora,
                     Chamado.status != "Cancelado"
                 )
-            ).all()
+            ).count()
 
-            total_chamados_mes = len(chamados_mes)
-
-            if not chamados_mes:
+            if total_chamados_mes == 0:
                 return "—", 0
 
-            # Busca todos os historicos de primeira resposta deste mês
-            historicos_primeira_resposta = db.query(HistoricoStatus).filter(
+            # Pega apenas a PRIMEIRA mudança de status por chamado
+            subquery = db.query(
+                HistoricoStatus.chamado_id,
+                func.min(HistoricoStatus.created_at).label('primeira_resposta_at')
+            ).filter(
                 and_(
                     HistoricoStatus.created_at >= mes_inicio,
-                    HistoricoStatus.created_at <= agora,
                     HistoricoStatus.status.in_(["Em Atendimento", "Em análise", "Em andamento"])
+                )
+            ).group_by(HistoricoStatus.chamado_id).subquery()
+
+            # Busca os históricos correspondentes à primeira resposta
+            primeiras_respostas = db.query(
+                HistoricoStatus.chamado_id,
+                HistoricoStatus.data_inicio
+            ).join(
+                subquery,
+                and_(
+                    HistoricoStatus.chamado_id == subquery.c.chamado_id,
+                    HistoricoStatus.created_at == subquery.c.primeira_resposta_at
                 )
             ).all()
 
-            if not historicos_primeira_resposta:
+            if not primeiras_respostas:
                 return "—", total_chamados_mes
 
-            tempos = []
-            for historico in historicos_primeira_resposta:
-                try:
-                    chamado = db.query(Chamado).filter(
-                        Chamado.id == historico.chamado_id
-                    ).first()
+            # Busca todos os chamados de uma vez (evita N+1 queries)
+            chamado_ids = [pr.chamado_id for pr in primeiras_respostas]
+            chamados = db.query(Chamado).filter(
+                Chamado.id.in_(chamado_ids)
+            ).all()
 
-                    if chamado and chamado.data_abertura and historico.data_inicio:
-                        delta = historico.data_inicio - chamado.data_abertura
-                        horas = delta.total_seconds() / 3600
-                        if horas >= 0:  # Apenas valores positivos
-                            tempos.append(horas)
-                except Exception:
-                    continue
+            chamados_dict = {c.id: c for c in chamados}
+
+            # Calcula os tempos
+            tempos = []
+            for pr in primeiras_respostas:
+                chamado = chamados_dict.get(pr.chamado_id)
+                if chamado and chamado.data_abertura and pr.data_inicio:
+                    delta = pr.data_inicio - chamado.data_abertura
+                    horas = delta.total_seconds() / 3600
+                    if 0 <= horas <= 168:  # Máximo 1 semana (filtro de sanidade)
+                        tempos.append(horas)
 
             if not tempos:
                 return "—", total_chamados_mes
 
             media_horas = sum(tempos) / len(tempos)
 
+            # Formata o resultado
             if media_horas < 1:
-                minutos = int(media_horas * 60)
-                return f"{minutos}m", total_chamados_mes
+                return f"{int(media_horas * 60)}m", total_chamados_mes
             else:
                 horas = int(media_horas)
                 minutos = int((media_horas - horas) * 60)
                 return (f"{horas}h {minutos}m" if minutos > 0 else f"{horas}h"), total_chamados_mes
+
         except Exception as e:
             print(f"Erro ao calcular tempo de resposta do mês: {e}")
             return "—", 0
