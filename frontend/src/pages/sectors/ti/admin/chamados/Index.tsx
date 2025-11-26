@@ -421,6 +421,12 @@ export default function ChamadosPage() {
     setIsLoadingMore(false);
   }, [filtro]);
 
+  // Reset visible count when view mode changes
+  useEffect(() => {
+    setVisibleTickets(6);
+    setIsLoadingMore(false);
+  }, [viewMode]);
+
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<UiTicket | null>(null);
   const [tab, setTab] = useState<"resumo" | "historico" | "ticket">("resumo");
