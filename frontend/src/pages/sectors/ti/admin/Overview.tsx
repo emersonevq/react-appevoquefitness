@@ -121,16 +121,16 @@ export default function Overview() {
       try {
         setDataLoading(true);
         const [daily, weekly, sla, performance] = await Promise.all([
-          apiFetch("/api/metrics/chamados-por-dia")
+          apiFetch("/metrics/chamados-por-dia")
             .then((r) => r.json())
             .catch(() => ({ dados: [] })),
-          apiFetch("/api/metrics/chamados-por-semana")
+          apiFetch("/metrics/chamados-por-semana")
             .then((r) => r.json())
             .catch(() => ({ dados: [] })),
-          apiFetch("/api/metrics/sla-distribution")
+          apiFetch("/metrics/sla-distribution")
             .then((r) => r.json())
             .catch(() => ({ dentro_sla: 0, fora_sla: 0 })),
-          apiFetch("/api/metrics/performance")
+          apiFetch("/metrics/performance")
             .then((r) => r.json())
             .catch(() => null),
         ]);
