@@ -8,7 +8,7 @@ class HistoricoStatus(Base):
     __tablename__ = "historico_status"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    chamado_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    chamado_id: Mapped[int] = mapped_column(Integer, ForeignKey("chamado.id"), nullable=False)
     status: Mapped[str] = mapped_column(String(50), nullable=False)
     data_inicio: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     data_fim: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
