@@ -186,46 +186,66 @@ def get_dashboard_metrics(db: Session = Depends(get_db)):
 
 @router.get("/metrics/chamados-abertos")
 def get_chamados_abertos(db: Session = Depends(get_db)):
-    """Retorna quantidade de chamados ativos (não concluídos nem cancelados)"""
+    """
+    [DEPRECATED] Use /metrics/realtime instead.
+
+    Retorna quantidade de chamados ativos (não concluídos nem cancelados)
+    """
     try:
         count = MetricsCalculator.get_abertos_agora(db)
         return {"ativos": count}
     except Exception as e:
         print(f"Erro ao contar chamados ativos: {e}")
-        return {"ativos": 0}
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Erro: {str(e)}")
 
 
 @router.get("/metrics/chamados-hoje")
 def get_chamados_hoje(db: Session = Depends(get_db)):
-    """Retorna quantidade de chamados abertos hoje"""
+    """
+    [DEPRECATED] Use /metrics/realtime instead.
+
+    Retorna quantidade de chamados abertos hoje
+    """
     try:
         count = MetricsCalculator.get_chamados_abertos_hoje(db)
         return {"chamados_hoje": count}
     except Exception as e:
         print(f"Erro ao contar chamados de hoje: {e}")
-        return {"chamados_hoje": 0}
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Erro: {str(e)}")
 
 
 @router.get("/metrics/tempo-resposta")
 def get_tempo_resposta(db: Session = Depends(get_db)):
-    """Retorna tempo médio de resposta das últimas 24h"""
+    """
+    [DEPRECATED] Use /metrics/dashboard/sla instead.
+
+    Retorna tempo médio de resposta das últimas 24h
+    """
     try:
         tempo = MetricsCalculator.get_tempo_medio_resposta_24h(db)
         return {"tempo_resposta": tempo}
     except Exception as e:
         print(f"Erro ao calcular tempo de resposta: {e}")
-        return {"tempo_resposta": "—"}
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Erro: {str(e)}")
 
 
 @router.get("/metrics/sla-compliance")
 def get_sla_compliance(db: Session = Depends(get_db)):
-    """Retorna percentual de SLA cumprido nas últimas 24h"""
+    """
+    [DEPRECATED] Use /metrics/dashboard/sla instead.
+
+    Retorna percentual de SLA cumprido nas últimas 24h
+    """
     try:
         percentual = MetricsCalculator.get_sla_compliance_24h(db)
         return {"sla_compliance": percentual}
     except Exception as e:
         print(f"Erro ao calcular SLA compliance: {e}")
-        return {"sla_compliance": 0}
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=f"Erro: {str(e)}")
 
 
 @router.get("/metrics/chamados-por-dia")
