@@ -164,7 +164,7 @@ export function CriarUsuario() {
     await checkAvailability("email", email);
     await checkAvailability("username", username);
     if (emailTaken || usernameTaken) {
-      alert("E-mail ou usu��rio já cadastrado.");
+      alert("E-mail ou usuário já cadastrado.");
       return;
     }
     if (!generatedPassword) {
@@ -578,6 +578,12 @@ export function Permissoes() {
   const [editForceReset, setEditForceReset] = useState<boolean>(false);
   const [biSubcategories, setBiSubcategories] = useState<string[]>([]);
 
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [visibleUsers, setVisibleUsers] = useState(9);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const usersContainerRef = useRef<HTMLDivElement>(null);
+  const loadMoreUsersRef = useRef<HTMLDivElement>(null);
+
   const allSectors = useMemo(() => sectors.map((s) => s.title), []);
   const biSector = useMemo(() => sectors.find((s) => s.slug === "bi"), []);
   const isEditBiSelected = editSetores.includes(normalize("Portal de BI"));
@@ -981,7 +987,7 @@ export function Permissoes() {
           <DialogHeader>
             <DialogTitle>Nova senha gerada</DialogTitle>
             <DialogDescription>
-              Guarde a senha com seguran��a. Ela será exibida apenas uma vez.
+              Guarde a senha com segurança. Ela será exibida apenas uma vez.
             </DialogDescription>
           </DialogHeader>
           {pwdDialog.pwd && (
