@@ -9,6 +9,7 @@ import {
   Loader,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useSLACacheManager } from "@/hooks/useSLACacheManager";
 import {
   Bar,
   BarChart,
