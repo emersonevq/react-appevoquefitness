@@ -170,111 +170,70 @@ export default function Overview() {
     gcTime: 60 * 60 * 1000,
   });
 
+  // Atualiza estado local quando dados do React Query chegam
   useEffect(() => {
-    let mounted = true;
+    if (basicMetricsData) {
+      setMetrics(basicMetricsData);
+    }
+  }, [basicMetricsData]);
 
-    const fetchData = async () => {
+  useEffect(() => {
+    if (dailyChartData && Array.isArray(dailyChartData)) {
+      setDailyData(dailyChartData);
+    }
+  }, [dailyChartData]);
+
+  useEffect(() => {
+    if (weeklyChartData && Array.isArray(weeklyChartData)) {
+      setWeeklyData(weeklyChartData);
+    }
+  }, [weeklyChartData]);
+
+  useEffect(() => {
+    if (performanceMetricsData) {
+      setPerformanceData(performanceMetricsData);
+    }
+  }, [performanceMetricsData]);
+
+  useEffect(() => {
+    if (slaMetricsData) {
+      // Merge das métricas de SLA com validação
+      setMetrics((prev) => ({
+        ...prev,
+        sla_compliance_24h: Number(slaMetricsData.sla_compliance_24h ?? 0),
+        sla_compliance_mes: Number(slaMetricsData.sla_compliance_mes ?? 0),
+        tempo_resposta_24h: slaMetricsData.tempo_resposta_24h ?? "—",
+        tempo_resposta_mes: slaMetricsData.tempo_resposta_mes ?? "—",
+        total_chamados_mes: Number(slaMetricsData.total_chamados_mes ?? 0),
+      }));
+
+      // Atualiza distribuição SLA
+      if (slaMetricsData?.sla_distribution) {
+        setSLAData({
+          dentro_sla: Number(slaMetricsData.sla_distribution.dentro_sla ?? 0),
+          fora_sla: Number(slaMetricsData.sla_distribution.fora_sla ?? 0),
+        });
+      }
+    }
+  }, [slaMetricsData]);
+
+  // Pré-aquece cache na primeira carga
+  useEffect(() => {
+    const preWarmCache = async () => {
       try {
-        setIsLoading(true);
-
-        // Pré-aquece cache de SLA para melhor performance
-        try {
-          await warmupCache();
-        } catch (error) {
-          console.warn("Aviso: Pré-aquecimento de cache falhou, prosseguindo com dados em tempo real");
-        }
-
-        // Carrega métricas RÁPIDAS primeiro
-        const basicMetrics = await api
-          .get("/metrics/dashboard/basic")
-          .catch(() => ({
-            data: {
-              chamados_hoje: 0,
-              comparacao_ontem: {
-                hoje: 0,
-                ontem: 0,
-                percentual: 0,
-                direcao: "up",
-              },
-              abertos_agora: 0,
-            },
-          }));
-
-        if (mounted) {
-          setMetrics(basicMetrics.data);
-        }
-
-        // Carrega gráficos e dados em paralelo
-        const [daily, weekly, performance] = await Promise.all([
-          api
-            .get("/metrics/chamados-por-dia")
-            .catch(() => ({ data: { dados: [] } })),
-          api
-            .get("/metrics/chamados-por-semana")
-            .catch(() => ({ data: { dados: [] } })),
-          api.get("/metrics/performance").catch(() => ({ data: null })),
-        ]);
-
-        if (mounted) {
-          setDailyData(daily.data?.dados || []);
-          setWeeklyData(weekly.data?.dados || []);
-          setPerformanceData(performance.data);
-        }
-
-        // Carrega métricas de SLA (mais lentas) por último com cache
-        const slaMetrics = await api
-          .get("/metrics/dashboard/sla")
-          .catch((error) => {
-            console.error("Erro ao carregar métricas de SLA:", error);
-            return {
-              data: {
-                sla_compliance_24h: 0,
-                sla_compliance_mes: 0,
-                sla_distribution: { dentro_sla: 0, fora_sla: 0 },
-                tempo_resposta_24h: "—",
-                tempo_resposta_mes: "—",
-                total_chamados_mes: 0,
-              },
-            };
-          });
-
-        if (mounted) {
-          // Validação dos dados recebidos
-          const validSLAData = slaMetrics?.data || {};
-
-          // Merge das métricas básicas com SLA com validação
-          setMetrics((prev) => ({
-            ...prev,
-            sla_compliance_24h: validSLAData.sla_compliance_24h ?? 0,
-            sla_compliance_mes: validSLAData.sla_compliance_mes ?? 0,
-            tempo_resposta_24h: validSLAData.tempo_resposta_24h ?? "—",
-            tempo_resposta_mes: validSLAData.tempo_resposta_mes ?? "—",
-            total_chamados_mes: validSLAData.total_chamados_mes ?? 0,
-          }));
-
-          // Atualiza distribuição SLA com validação
-          if (validSLAData?.sla_distribution) {
-            const dist = validSLAData.sla_distribution;
-            setSLAData({
-              dentro_sla: dist.dentro_sla ?? 0,
-              fora_sla: dist.fora_sla ?? 0,
-            });
-          }
-        }
+        await warmupCache();
       } catch (error) {
-        console.error("Erro ao carregar dados do dashboard:", error);
-      } finally {
-        if (mounted) {
-          setIsLoading(false);
-        }
+        console.warn("Aviso: Pré-aquecimento de cache falhou");
       }
     };
+    preWarmCache();
+  }, [warmupCache]);
 
-    fetchData();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+  // Determina se está carregando
+  useEffect(() => {
+    const allLoading = basicLoading || dailyLoading || weeklyLoading || slaLoading || performanceLoading;
+    setIsLoading(allLoading);
+  }, [basicLoading, dailyLoading, weeklyLoading, slaLoading, performanceLoading]);
 
   if (isLoading) {
     return (
