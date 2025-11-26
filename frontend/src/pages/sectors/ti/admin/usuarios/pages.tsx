@@ -629,6 +629,27 @@ export function Permissoes() {
       window.removeEventListener("users:changed", onChanged as EventListener);
   }, []);
 
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleUsers < users.length) {
+          setIsLoadingMore(true);
+          setTimeout(() => {
+            setVisibleUsers((prev) => Math.min(prev + 9, users.length));
+            setIsLoadingMore(false);
+          }, 400);
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    if (loadMoreUsersRef.current) {
+      observer.observe(loadMoreUsersRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [visibleUsers, users.length]);
+
   const openEdit = (u: ApiUser) => {
     setEditing(u);
     setEditNome(u.nome);
