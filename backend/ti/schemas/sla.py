@@ -37,10 +37,25 @@ class SLAConfigurationCreate(BaseModel):
 
 
 class SLAConfigurationUpdate(BaseModel):
-    tempo_resposta_horas: float | None = None
-    tempo_resolucao_horas: float | None = None
-    descricao: str | None = None
-    ativo: bool | None = None
+    tempo_resposta_horas: float | None = Field(None, gt=0, description="Tempo máximo de resposta em horas")
+    tempo_resolucao_horas: float | None = Field(None, gt=0, description="Tempo máximo de resolução em horas")
+    descricao: str | None = Field(None, description="Descrição da configuração")
+    ativo: bool | None = Field(None, description="Se a configuração está ativa")
+
+    @validator("tempo_resposta_horas", "tempo_resolucao_horas", pre=True, always=True)
+    def validate_positive_hours(cls, v):
+        """Valida que tempos são positivos quando fornecidos"""
+        if v is not None and v <= 0:
+            raise ValueError("Tempo deve ser maior que zero")
+        return v
+
+    @validator("tempo_resolucao_horas", pre=True, always=True)
+    def validate_resolucao_maior_que_resposta(cls, v, values):
+        """Valida que resolução >= resposta quando ambas são fornecidas"""
+        if v is not None and "tempo_resposta_horas" in values and values["tempo_resposta_horas"] is not None:
+            if v < values["tempo_resposta_horas"]:
+                raise ValueError("Tempo de resolução deve ser >= tempo de resposta")
+        return v
 
 
 class SLAConfigurationOut(BaseModel):
