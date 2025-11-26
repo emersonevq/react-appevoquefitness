@@ -1041,11 +1041,19 @@ export function Permissoes() {
           </div>
         )}
 
-        {!loading && users.length > 0 && visibleUsers < users.length && (
-          <div ref={loadMoreUsersRef} className="flex justify-center py-8">
+        {!loading && users.length > 0 && (
+          <div
+            ref={loadMoreUsersRef}
+            className="flex justify-center py-8 mt-4"
+          >
             {isLoadingMore && (
               <div className="text-sm text-muted-foreground">
                 Carregando mais usuários...
+              </div>
+            )}
+            {visibleUsers >= users.length && (
+              <div className="text-xs text-muted-foreground">
+                Fim da lista
               </div>
             )}
           </div>
