@@ -41,39 +41,53 @@ class MetricsCalculator:
 
     @staticmethod
     def get_tempo_medio_resposta_24h(db: Session) -> str:
-        """Calcula tempo médio de resposta das últimas 24h"""
+        """Calcula tempo médio de resposta das últimas 24h usando historico_status"""
         agora = now_brazil_naive()
         ontem = agora - timedelta(hours=24)
-        
-        chamados = db.query(Chamado).filter(
-            and_(
-                Chamado.data_abertura >= ontem,
-                Chamado.data_primeira_resposta.isnot(None),
-            )
-        ).all()
-        
-        if not chamados:
+
+        try:
+            # Busca todos os chamados que tiveram primeira resposta nas últimas 24h
+            # Uma "primeira resposta" é quando um chamado sai do status "Aberto"
+            chamados_com_resposta = db.query(HistoricoStatus).filter(
+                and_(
+                    HistoricoStatus.criado_em >= ontem,
+                    HistoricoStatus.status_anterior == "Aberto",
+                    HistoricoStatus.status_novo != "Aberto"
+                )
+            ).all()
+
+            if not chamados_com_resposta:
+                return "—"
+
+            tempos = []
+            for historico in chamados_com_resposta:
+                try:
+                    chamado = db.query(Chamado).filter(
+                        Chamado.id == historico.chamado_id
+                    ).first()
+
+                    if chamado and chamado.data_abertura and historico.criado_em:
+                        delta = historico.criado_em - chamado.data_abertura
+                        horas = delta.total_seconds() / 3600
+                        tempos.append(horas)
+                except Exception:
+                    continue
+
+            if not tempos:
+                return "—"
+
+            media_horas = sum(tempos) / len(tempos)
+
+            if media_horas < 1:
+                minutos = int(media_horas * 60)
+                return f"{minutos}m"
+            else:
+                horas = int(media_horas)
+                minutos = int((media_horas - horas) * 60)
+                return f"{horas}h {minutos}m" if minutos > 0 else f"{horas}h"
+        except Exception as e:
+            print(f"Erro ao calcular tempo de resposta: {e}")
             return "—"
-        
-        tempos = []
-        for chamado in chamados:
-            if chamado.data_primeira_resposta and chamado.data_abertura:
-                delta = chamado.data_primeira_resposta - chamado.data_abertura
-                horas = delta.total_seconds() / 3600
-                tempos.append(horas)
-        
-        if not tempos:
-            return "—"
-        
-        media_horas = sum(tempos) / len(tempos)
-        
-        if media_horas < 1:
-            minutos = int(media_horas * 60)
-            return f"{minutos}m"
-        else:
-            horas = int(media_horas)
-            minutos = int((media_horas - horas) * 60)
-            return f"{horas}h {minutos}m" if minutos > 0 else f"{horas}h"
 
     @staticmethod
     def get_sla_compliance_24h(db: Session) -> int:
