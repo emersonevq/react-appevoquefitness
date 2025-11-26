@@ -13,16 +13,22 @@ class MetricsCalculator:
     @staticmethod
     def get_chamados_abertos_hoje(db: Session) -> int:
         """Retorna quantidade de chamados abertos hoje"""
-        hoje = now_brazil_naive().replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        count = db.query(Chamado).filter(
-            and_(
-                Chamado.data_abertura >= hoje,
-                Chamado.status != "Cancelado"
-            )
-        ).count()
-        
-        return count
+        try:
+            hoje = now_brazil_naive().replace(hour=0, minute=0, second=0, microsecond=0)
+
+            count = db.query(Chamado).filter(
+                and_(
+                    Chamado.data_abertura >= hoje,
+                    Chamado.status != "Cancelado"
+                )
+            ).count()
+
+            return count
+        except Exception as e:
+            print(f"Erro ao contar chamados de hoje: {e}")
+            import traceback
+            traceback.print_exc()
+            return 0
 
     @staticmethod
     def get_abertos_agora(db: Session) -> int:
