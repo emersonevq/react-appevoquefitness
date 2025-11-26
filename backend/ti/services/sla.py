@@ -60,7 +60,8 @@ class SLACalculator:
         start: datetime,
         end: datetime,
         db: Session,
-        historicos_cache: dict | None = None
+        historicos_cache: dict | None = None,
+        business_hours_cache: dict | None = None
     ) -> float:
         """
         Calcula horas de NEGÓCIO excluindo períodos em "Em análise".
@@ -73,13 +74,16 @@ class SLACalculator:
         Parâmetro historicos_cache: dict {chamado_id: [historicos]}
         Se fornecido, evita queries ao banco (otimização para bulk)
 
+        Parâmetro business_hours_cache: dict {weekday: (start_time, end_time)}
+        Se fornecido, evita queries ao banco para business hours
+
         Retorna: horas de negócio SEM contar pausa
         """
         if start >= end:
             return 0.0
 
-        # 1. Calcula tempo total em horas de negócio
-        tempo_total = SLACalculator.calculate_business_hours(start, end, db)
+        # 1. Calcula tempo total em horas de negócio (com cache de business hours)
+        tempo_total = SLACalculator.calculate_business_hours(start, end, db, business_hours_cache)
 
         # 2. Busca períodos em "Em análise"
         from ti.models.historico_status import HistoricoStatus
