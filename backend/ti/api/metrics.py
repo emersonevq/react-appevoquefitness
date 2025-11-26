@@ -174,9 +174,13 @@ def get_chamados_por_dia(dias: int = 7, db: Session = Depends(get_db)):
     """Retorna quantidade de chamados por dia dos últimos N dias"""
     try:
         dados = MetricsCalculator.get_chamados_por_dia(db, dias)
+        if not isinstance(dados, list):
+            return {"dados": []}
         return {"dados": dados}
     except Exception as e:
         print(f"Erro ao calcular chamados por dia: {e}")
+        import traceback
+        traceback.print_exc()
         return {"dados": []}
 
 
