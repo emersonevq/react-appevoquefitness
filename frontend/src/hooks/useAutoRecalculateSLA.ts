@@ -28,7 +28,6 @@ export function useAutoRecalculateSLA() {
     },
   });
 
-
   return {
     stats: mutation.data,
     isLoading: mutation.isPending,

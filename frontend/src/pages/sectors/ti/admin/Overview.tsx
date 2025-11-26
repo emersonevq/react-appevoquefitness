@@ -123,9 +123,15 @@ export default function Overview() {
         setIsLoading(true);
 
         const [daily, weekly, sla, performance, dashboard] = await Promise.all([
-          api.get("/metrics/chamados-por-dia").catch(() => ({ data: { dados: [] } })),
-          api.get("/metrics/chamados-por-semana").catch(() => ({ data: { dados: [] } })),
-          api.get("/metrics/sla-distribution").catch(() => ({ data: { dentro_sla: 0, fora_sla: 0 } })),
+          api
+            .get("/metrics/chamados-por-dia")
+            .catch(() => ({ data: { dados: [] } })),
+          api
+            .get("/metrics/chamados-por-semana")
+            .catch(() => ({ data: { dados: [] } })),
+          api
+            .get("/metrics/sla-distribution")
+            .catch(() => ({ data: { dentro_sla: 0, fora_sla: 0 } })),
           api.get("/metrics/performance").catch(() => ({ data: null })),
           api.get("/metrics/dashboard").catch(() => ({ data: null })),
         ]);
