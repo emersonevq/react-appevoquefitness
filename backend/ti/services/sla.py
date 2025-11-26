@@ -55,6 +55,58 @@ class SLACalculator:
         return hora_inicio <= dt.time() <= hora_fim
 
     @staticmethod
+    def calculate_business_hours_excluding_paused(
+        chamado_id: int,
+        start: datetime,
+        end: datetime,
+        db: Session
+    ) -> float:
+        """
+        Calcula horas de NEGÓCIO excluindo períodos em "Em análise".
+
+        Lógica:
+        1. Calcula horas de negócio total (start até end)
+        2. Identifica períodos onde status = "Em análise"
+        3. Subtrai horas em "Em análise" do total
+
+        Retorna: horas de negócio SEM contar pausa
+        """
+        if start >= end:
+            return 0.0
+
+        # 1. Calcula tempo total em horas de negócio
+        tempo_total = SLACalculator.calculate_business_hours(start, end, db)
+
+        # 2. Busca todos os períodos em "Em análise"
+        from ti.models.historico_status import HistoricoStatus
+
+        historicos_analise = db.query(HistoricoStatus).filter(
+            and_(
+                HistoricoStatus.chamado_id == chamado_id,
+                HistoricoStatus.status.in_(["Em análise", "Em Análise"]),
+                HistoricoStatus.data_inicio.isnot(None),
+                HistoricoStatus.data_fim.isnot(None),
+                HistoricoStatus.data_inicio >= start,
+                HistoricoStatus.data_fim <= end,
+            )
+        ).all()
+
+        # 3. Subtrai horas em "Em análise"
+        tempo_analise_total = 0.0
+        for hist in historicos_analise:
+            if hist.data_inicio and hist.data_fim:
+                tempo_analise = SLACalculator.calculate_business_hours(
+                    hist.data_inicio,
+                    hist.data_fim,
+                    db
+                )
+                tempo_analise_total += tempo_analise
+
+        # Retorna tempo total menos pausa
+        tempo_sla = tempo_total - tempo_analise_total
+        return max(0, tempo_sla)  # Nunca negativo
+
+    @staticmethod
     def calculate_business_hours(start: datetime, end: datetime, db: Session | None = None) -> float:
         if start >= end:
             return 0.0
