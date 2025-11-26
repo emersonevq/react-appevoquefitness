@@ -55,6 +55,8 @@ const groups = [
 ];
 
 export default function AdminLayout() {
+  useAutoRecalculateSLA();
+
   return (
     <Layout>
       {/* Header */}
