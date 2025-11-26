@@ -791,9 +791,10 @@ class MetricsCalculator:
 
     @staticmethod
     def get_performance_metrics(db: Session) -> dict:
-        """Retorna métricas de performance (últimos 30 dias) - OTIMIZADO sem N+1 queries"""
+        """Retorna métricas de performance (últimos 30 dias) - OTIMIZADO sem N+1 queries e com cache business hours"""
         try:
             from ti.services.sla import SLACalculator
+            from ti.models.sla_config import SLABusinessHours
 
             agora = now_brazil_naive()
             trinta_dias_atras = agora - timedelta(days=30)
@@ -806,7 +807,7 @@ class MetricsCalculator:
             ).all()
 
             chamado_ids = [c.id for c in chamados_30dias]
-            
+
             # OTIMIZAÇÃO: Carregar TODOS os históricos de UMA VEZ ao invés de N queries
             historicos_bulk = db.query(HistoricoStatus).filter(
                 HistoricoStatus.chamado_id.in_(chamado_ids)
@@ -818,6 +819,20 @@ class MetricsCalculator:
                     historicos_cache[hist.chamado_id] = []
                 historicos_cache[hist.chamado_id].append(hist)
 
+            # PRÉ-CARREGAR business hours de uma vez (evita queries em loop)
+            business_hours_cache = {}
+            for weekday in range(5):
+                bh_result = db.query(SLABusinessHours).filter(
+                    and_(
+                        SLABusinessHours.dia_semana == weekday,
+                        SLABusinessHours.ativo == True
+                    )
+                ).first()
+                if bh_result:
+                    business_hours_cache[weekday] = (bh_result.hora_inicio, bh_result.hora_fim)
+                else:
+                    business_hours_cache[weekday] = SLACalculator.DEFAULT_BUSINESS_HOURS.get(weekday)
+
             tempos_resolucao = []
             for chamado in chamados_30dias:
                 if chamado.data_conclusao and chamado.data_abertura:
@@ -826,7 +841,8 @@ class MetricsCalculator:
                         chamado.data_abertura,
                         chamado.data_conclusao,
                         db,
-                        historicos_cache
+                        historicos_cache,
+                        business_hours_cache
                     )
                     tempos_resolucao.append(horas)
 
