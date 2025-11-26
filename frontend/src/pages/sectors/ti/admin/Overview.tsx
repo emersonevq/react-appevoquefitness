@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   TrendingUp,
   Clock,
@@ -9,6 +9,7 @@ import {
   Loader,
 } from "lucide-react";
 import { useMetrics } from "@/hooks/useMetrics";
+import { apiFetch } from "@/lib/api";
 import {
   Bar,
   BarChart,
