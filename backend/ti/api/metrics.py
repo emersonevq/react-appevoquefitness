@@ -204,9 +204,29 @@ def get_sla_distribution(db: Session = Depends(get_db)):
     """Retorna distribuição de SLA (dentro/fora do acordo)"""
     try:
         dist = MetricsCalculator.get_sla_distribution(db)
-        return dist
+
+        # Validação de tipo
+        if not isinstance(dist, dict):
+            return {
+                "dentro_sla": 0,
+                "fora_sla": 0,
+                "percentual_dentro": 0,
+                "percentual_fora": 0,
+                "total": 0
+            }
+
+        # Garante que todos os campos existem e são números
+        return {
+            "dentro_sla": int(dist.get("dentro_sla", 0)),
+            "fora_sla": int(dist.get("fora_sla", 0)),
+            "percentual_dentro": int(dist.get("percentual_dentro", 0)),
+            "percentual_fora": int(dist.get("percentual_fora", 0)),
+            "total": int(dist.get("total", 0))
+        }
     except Exception as e:
         print(f"Erro ao calcular distribuição de SLA: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             "dentro_sla": 0,
             "fora_sla": 0,
