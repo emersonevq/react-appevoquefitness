@@ -12,26 +12,34 @@ A página de "Visão Geral" (Overview) estava **muito lenta** ao exibir as métr
 ## As Soluções Implementadas
 
 ### 1️⃣ **Aumentar TTL do Cache** (30 segundos → 10 minutos)
+
 **Arquivo**: `backend/ti/services/metrics.py` linha 14
+
 - TTL aumentado de 30 para 600 segundos
 - Reduz recálculos desnecessários em **20 vezes**
 
 ### 2️⃣ **Criar Cache Persistente no Banco**
+
 **Arquivo**: `backend/ti/models/metrics_cache.py` (novo)
+
 - Modelo `MetricsCacheDB`: Armazena métricas calculadas no BD
 - Sobrevive a restarts do servidor
 - Validade automática pelo campo `expires_at`
 
 ### 3️⃣ **Log de Performance de Cálculos**
+
 **Arquivo**: `backend/ti/models/metrics_cache.py` (novo)
+
 - Modelo `SLACalculationLog`: Rastreia tempo de execução
 - Permite monitorar degradação de performance
 - Útil para identificar gargalos
 
 ### 4️⃣ **Otimizar N+1 Queries**
+
 **Arquivo**: `backend/ti/services/metrics.py` função `get_performance_metrics`
 
 **Antes** (lento):
+
 ```python
 for chamado in chamados_30dias:  # ~100 chamados
     # Esta query é executada 100 vezes!
@@ -39,9 +47,11 @@ for chamado in chamados_30dias:  # ~100 chamados
         HistoricoStatus.chamado_id == chamado.id
     ).count()
 ```
+
 **Resultado**: 1 + 100 = **101 queries ao banco**
 
 **Depois** (otimizado):
+
 ```python
 # Carregar TODOS os históricos uma vez
 historicos_bulk = db.query(HistoricoStatus).filter(
@@ -55,23 +65,26 @@ historicos_cache = {chamado_id: [históricos]}
 for chamado in chamados:
     historicos = historicos_cache.get(chamado.id, [])  # ~0ms
 ```
+
 **Resultado**: **1 query ao banco** (99% menos!)
 
 ### 5️⃣ **Otimizar `_calculate_sla_distribution`**
+
 **Arquivo**: `backend/ti/services/metrics.py` função `_calculate_sla_distribution`
+
 - Agora pré-carrega TODOS os históricos com `historicos_cache`
 - Evita queries adicionais no loop principal
 
 ## Melhorias de Performance
 
-| Aspecto | Antes | Depois | Melhoria |
-|---------|-------|--------|----------|
-| **Cache TTL** | 30s | 600s | **20x maior** |
-| **Recalculations/hora** | ~120 | ~6 | **95% menos** |
-| **Queries em get_performance_metrics** | 101 | 1 | **100x menos** |
+| Aspecto                                          | Antes        | Depois    | Melhoria             |
+| ------------------------------------------------ | ------------ | --------- | -------------------- |
+| **Cache TTL**                                    | 30s          | 600s      | **20x maior**        |
+| **Recalculations/hora**                          | ~120         | ~6        | **95% menos**        |
+| **Queries em get_performance_metrics**           | 101          | 1         | **100x menos**       |
 | **Tempo de resposta /api/metrics/dashboard/sla** | 2-5 segundos | 500-700ms | **4-8x mais rápido** |
-| **Cache persistence** | Não | Sim | ✅ Survive restarts |
-| **Memory footprint** | ~200KB | ~500KB | Mínimo |
+| **Cache persistence**                            | Não          | Sim       | ✅ Survive restarts  |
+| **Memory footprint**                             | ~200KB       | ~500KB    | Mínimo               |
 
 ## Como Implementar
 
@@ -120,11 +133,13 @@ npm run dev  # Frontend
 ## Verificar que Está Funcionando
 
 ### 1. Testar Endpoint de Status
+
 ```bash
 curl http://localhost:8000/api/metrics/cache/status
 ```
 
 **Resposta esperada**:
+
 ```json
 {
   "status": "ok",
@@ -141,19 +156,22 @@ curl http://localhost:8000/api/metrics/cache/status
 ```
 
 ### 2. Acessar Visão Geral
+
 1. Abra http://localhost:3000
 2. Vá para o setor TI
 3. Clique em "Visão Geral"
 4. **Deve carregar MUITO mais rápido** (segundos ao invés de minutos)
 
 ### 3. Força Recálculo (se necessário)
+
 ```bash
 curl -X POST http://localhost:8000/api/metrics/cache/clear
 ```
 
 ### 4. Ver Logs de Performance
+
 ```sql
-SELECT 
+SELECT
     calculation_type,
     last_calculated_at,
     chamados_count,
@@ -196,18 +214,18 @@ REQUEST → /api/metrics/dashboard/sla
 1. Verificar Cache em Memória
    ├─ Válido (< 10 min)? → RETORNA em ~1ms ✅
    └─ Expirado? → Próximo passo
-   
+
 2. Verificar Cache Persistente (BD)
    ├─ Válido (< 10 min)? → RETORNA em ~20ms + atualiza memória ✅
    └─ Expirado? → Próximo passo
-   
+
 3. CALCULAR DO ZERO (~500-700ms)
    ├─ Load SLA Configs (1 query)
    ├─ Load Chamados do Mês (1 query)
    ├─ Load Todos Históricos (1 query - BULK!)
    ├─ Processa em Memória (sem queries)
    └─ Retorna Resultado ✅
-   
+
 4. ARMAZENA em Cache
    ├─ Cache em Memória (for próximas 10 min)
    └─ Cache no BD (for próximos 10 min)
@@ -216,15 +234,18 @@ REQUEST → /api/metrics/dashboard/sla
 ### Exemplo de Timeline
 
 **Minuto 0**: Primeiro acesso
+
 - Calcula: 500ms
 - Armazena em cache
 - Retorna: 500ms
 
 **Minuto 1**: Segundo acesso (dentro de 10 min)
+
 - Cache em memória válido
 - Retorna: 1ms (499ms mais rápido!)
 
 **Minuto 11**: Cache expirou
+
 - Recalcula: 500ms
 - Atualiza cache
 - Retorna: 500ms
@@ -232,17 +253,20 @@ REQUEST → /api/metrics/dashboard/sla
 ## Informações Técnicas
 
 ### Cache em Memória
+
 - **Tipo**: Thread-safe dictionary com lock
 - **TTL**: 600 segundos (10 minutos)
 - **Localização**: `backend/ti/services/metrics.py` classe `MetricsCache`
 
 ### Cache Persistente
+
 - **Tipo**: Tabela MySQL `metrics_cache_db`
 - **TTL**: Baseado em campo `expires_at`
 - **Cleanup**: Automático quando expirado
 - **Classe**: `PersistentMetricsCache` em `backend/ti/services/metrics.py`
 
 ### Logging de Performance
+
 - **Tabela**: `sla_calculation_log`
 - **Rastreia**: Tipo de cálculo, tempo de execução, quantidade de chamados
 - **Útil para**: Monitorar degradação e identificar gargalos
@@ -288,12 +312,12 @@ Para monitorar a performance:
 
 ```sql
 -- Ver últimos cálculos
-SELECT * FROM sla_calculation_log 
-ORDER BY last_calculated_at DESC 
+SELECT * FROM sla_calculation_log
+ORDER BY last_calculated_at DESC
 LIMIT 10;
 
 -- Tempo médio de execução
-SELECT 
+SELECT
     calculation_type,
     AVG(execution_time_ms) as tempo_medio_ms,
     COUNT(*) as total_execucoes
@@ -301,9 +325,9 @@ FROM sla_calculation_log
 GROUP BY calculation_type;
 
 -- Últimas invalidações de cache
-SELECT * FROM metrics_cache_db 
+SELECT * FROM metrics_cache_db
 WHERE expires_at < NOW()
-ORDER BY expires_at DESC 
+ORDER BY expires_at DESC
 LIMIT 10;
 ```
 
