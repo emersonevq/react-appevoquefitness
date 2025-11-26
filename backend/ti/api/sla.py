@@ -94,30 +94,48 @@ def atualizar_sla_config(
     payload: SLAConfigurationUpdate,
     db: Session = Depends(get_db)
 ):
+    from ti.services.sla_transaction_manager import SLATransactionManager
+
     try:
         try:
             SLAConfiguration.__table__.create(bind=engine, checkfirst=True)
         except Exception:
             pass
 
-        config = db.query(SLAConfiguration).filter(SLAConfiguration.id == config_id).first()
-        if not config:
-            raise HTTPException(status_code=404, detail="Configuração de SLA não encontrada")
+        def _update_config(db_session: Session, config_id: int, payload: SLAConfigurationUpdate) -> SLAConfiguration:
+            config = db_session.query(SLAConfiguration).filter(SLAConfiguration.id == config_id).first()
+            if not config:
+                raise HTTPException(status_code=404, detail="Configuração de SLA não encontrada")
 
-        if payload.tempo_resposta_horas is not None:
-            config.tempo_resposta_horas = payload.tempo_resposta_horas
-        if payload.tempo_resolucao_horas is not None:
-            config.tempo_resolucao_horas = payload.tempo_resolucao_horas
-        if payload.descricao is not None:
-            config.descricao = payload.descricao
-        if payload.ativo is not None:
-            config.ativo = payload.ativo
+            if payload.tempo_resposta_horas is not None:
+                config.tempo_resposta_horas = payload.tempo_resposta_horas
+            if payload.tempo_resolucao_horas is not None:
+                config.tempo_resolucao_horas = payload.tempo_resolucao_horas
+            if payload.descricao is not None:
+                config.descricao = payload.descricao
+            if payload.ativo is not None:
+                config.ativo = payload.ativo
 
-        config.atualizado_em = now_brazil_naive()
-        db.add(config)
-        db.commit()
-        db.refresh(config)
-        return config
+            config.atualizado_em = now_brazil_naive()
+            db_session.add(config)
+            db_session.flush()
+
+            # Invalida cache atomicamente
+            SLACacheManager.invalidate_all_sla(db_session)
+
+            return config
+
+        result = SLATransactionManager.execute_atomic(
+            db, _update_config, config_id, payload
+        )
+
+        if result.success:
+            config = result.data
+            db.refresh(config)
+            return config
+        else:
+            raise HTTPException(status_code=500, detail=result.error)
+
     except HTTPException:
         raise
     except Exception as e:
@@ -365,7 +383,7 @@ def sincronizar_todos_chamados(db: Session = Depends(get_db)):
 def recalcular_sla_painel(db: Session = Depends(get_db)):
     """
     Recalcula todos os SLAs quando o painel administrativo é acessado.
-    Operaç��o atômica: ou recalcula tudo ou não recalcula nada.
+    Operação atômica: ou recalcula tudo ou não recalcula nada.
     """
     from ti.services.sla_transaction_manager import SLATransactionManager
 
