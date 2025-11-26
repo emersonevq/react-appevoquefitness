@@ -76,7 +76,7 @@ def _sincronizar_sla(db: Session, chamado: Chamado, status_anterior: str | None 
         # INVALIDAÇÃO DE CACHE: Quando um chamado é atualizado, invalida caches relacionados
         SLACacheManager.invalidate_by_chamado(db, chamado.id)
 
-        # ATUALIZAÇÃO INCREMENTAL DE MÉTRICAS: Recalcula apenas o chamado afetado
+        # ATUALIZA��ÃO INCREMENTAL DE MÉTRICAS: Recalcula apenas o chamado afetado
         from ti.services.cache_manager_incremental import IncrementalMetricsCache
         IncrementalMetricsCache.update_for_chamado(db, chamado.id)
 
@@ -590,6 +590,11 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session 
         db.add(ch)
         db.commit()  # garante persistência do status antes dos logs
         db.refresh(ch)
+
+        # DECREMENTAR CONTADOR DE HOJE SE CANCELADO
+        if novo == "Cancelado" and prev != "Cancelado":
+            from ti.services.cache_manager_incremental import ChamadosTodayCounter
+            ChamadosTodayCounter.decrement(db, 1)
 
         # Sincroniza automaticamente com tabela de SLA
         _sincronizar_sla(db, ch, status_anterior=prev)
