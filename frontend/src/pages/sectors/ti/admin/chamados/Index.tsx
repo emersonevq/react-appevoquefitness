@@ -233,6 +233,7 @@ export default function ChamadosPage() {
   // Infinite scroll state
   const [visibleTickets, setVisibleTickets] = useState(6);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const ticketsContainerRef = useRef<HTMLDivElement>(null);
   const loadMoreTicketsRef = useRef<HTMLDivElement>(null);
 
