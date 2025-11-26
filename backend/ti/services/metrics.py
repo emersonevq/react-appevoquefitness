@@ -227,37 +227,43 @@ class MetricsCalculator:
     @staticmethod
     def get_comparacao_ontem(db: Session) -> dict:
         """Compara chamados de hoje vs ontem"""
-        agora = now_brazil_naive()
-        hoje_inicio = agora.replace(hour=0, minute=0, second=0, microsecond=0)
-        ontem_inicio = (agora - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-        ontem_fim = hoje_inicio
-        
-        chamados_hoje = db.query(Chamado).filter(
-            and_(
-                Chamado.data_abertura >= hoje_inicio,
-                Chamado.status != "Cancelado"
-            )
-        ).count()
-        
-        chamados_ontem = db.query(Chamado).filter(
-            and_(
-                Chamado.data_abertura >= ontem_inicio,
-                Chamado.data_abertura < ontem_fim,
-                Chamado.status != "Cancelado"
-            )
-        ).count()
-        
-        if chamados_ontem == 0:
-            percentual = 0
-        else:
-            percentual = int(((chamados_hoje - chamados_ontem) / chamados_ontem) * 100)
-        
-        return {
-            "hoje": chamados_hoje,
-            "ontem": chamados_ontem,
-            "percentual": percentual,
-            "direcao": "up" if percentual >= 0 else "down"
-        }
+        try:
+            agora = now_brazil_naive()
+            hoje_inicio = agora.replace(hour=0, minute=0, second=0, microsecond=0)
+            ontem_inicio = (agora - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+            ontem_fim = hoje_inicio
+
+            chamados_hoje = db.query(Chamado).filter(
+                and_(
+                    Chamado.data_abertura >= hoje_inicio,
+                    Chamado.status != "Cancelado"
+                )
+            ).count()
+
+            chamados_ontem = db.query(Chamado).filter(
+                and_(
+                    Chamado.data_abertura >= ontem_inicio,
+                    Chamado.data_abertura < ontem_fim,
+                    Chamado.status != "Cancelado"
+                )
+            ).count()
+
+            if chamados_ontem == 0:
+                percentual = 0
+            else:
+                percentual = int(((chamados_hoje - chamados_ontem) / chamados_ontem) * 100)
+
+            return {
+                "hoje": chamados_hoje,
+                "ontem": chamados_ontem,
+                "percentual": percentual,
+                "direcao": "up" if percentual >= 0 else "down"
+            }
+        except Exception as e:
+            print(f"Erro ao calcular comparação com ontem: {e}")
+            import traceback
+            traceback.print_exc()
+            return {"hoje": 0, "ontem": 0, "percentual": 0, "direcao": "up"}
 
     @staticmethod
     def get_tempo_resolucao_media_30dias(db: Session) -> str:
