@@ -637,10 +637,10 @@ export function Permissoes() {
           setTimeout(() => {
             setVisibleUsers((prev) => Math.min(prev + 9, users.length));
             setIsLoadingMore(false);
-          }, 400);
+          }, 300);
         }
       },
-      { threshold: 0.1 },
+      { threshold: 0.5 },
     );
 
     if (loadMoreUsersRef.current) {
@@ -649,6 +649,11 @@ export function Permissoes() {
 
     return () => observer.disconnect();
   }, [visibleUsers, users.length]);
+
+  useEffect(() => {
+    setVisibleUsers(9);
+    setIsLoadingMore(false);
+  }, [viewMode]);
 
   const openEdit = (u: ApiUser) => {
     setEditing(u);
