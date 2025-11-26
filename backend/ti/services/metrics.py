@@ -154,6 +154,8 @@ class MetricsCalculator:
     @staticmethod
     def get_tempo_medio_resposta_mes(db: Session) -> tuple[str, int]:
         """Calcula tempo médio de PRIMEIRA resposta deste mês usando Chamado.data_primeira_resposta"""
+        from ti.services.sla import SLACalculator
+
         agora = now_brazil_naive()
         mes_inicio = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
@@ -180,15 +182,19 @@ class MetricsCalculator:
             if not chamados:
                 return "—", total_chamados_mes
 
-            # Calcula os tempos
+            # Calcula os tempos em horas de NEGÓCIO
             tempos = []
             for chamado in chamados:
                 if chamado.data_primeira_resposta and chamado.data_abertura:
-                    delta = chamado.data_primeira_resposta - chamado.data_abertura
-                    horas = delta.total_seconds() / 3600
+                    # Usa horas de NEGÓCIO (não clock time)
+                    horas = SLACalculator.calculate_business_hours(
+                        chamado.data_abertura,
+                        chamado.data_primeira_resposta,
+                        db
+                    )
 
-                    # Filtro de sanidade: apenas valores entre 0 e 24h
-                    if 0 <= horas <= 24:
+                    # Filtro de sanidade: apenas valores entre 0 e 72h
+                    if 0 <= horas <= 72:
                         tempos.append(horas)
 
             if not tempos:
