@@ -238,6 +238,7 @@ def debug_recalculate_sla(db: Session = Depends(get_db)):
     """
     try:
         from ti.services.sla_cache import SLACacheManager
+        from core.utils import now_brazil_naive
 
         # Invalida todos os caches
         SLACacheManager.invalidate_all_sla(db)
@@ -252,7 +253,7 @@ def debug_recalculate_sla(db: Session = Depends(get_db)):
             "sla_compliance_24h": sla_24h,
             "sla_compliance_mes": sla_mes,
             "sla_distribution": sla_dist,
-            "timestamp": str(MetricsCalculator.get_abertos_agora.__self__.get_abertos_agora(db))
+            "timestamp": now_brazil_naive().isoformat()
         }
     except Exception as e:
         print(f"Erro ao recalcular SLA: {e}")
