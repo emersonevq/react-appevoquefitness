@@ -396,7 +396,8 @@ def recalcular_sla_painel(db: Session = Depends(get_db)):
                 elif status_sla == "congelado":
                     stats["congelados"] += 1
 
-            except Exception:
+            except Exception as e:
+                print(f"Erro ao recalcular SLA do chamado {chamado.id}: {e}")
                 stats["erros"] += 1
                 db.rollback()
 
