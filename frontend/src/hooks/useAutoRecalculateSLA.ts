@@ -28,10 +28,6 @@ export function useAutoRecalculateSLA() {
     },
   });
 
-  useEffect(() => {
-    mutation.mutate();
-  }, []);
-
   return {
     stats: mutation.data,
     isLoading: mutation.isPending,

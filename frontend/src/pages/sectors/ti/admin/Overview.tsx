@@ -8,8 +8,7 @@ import {
   ArrowDownRight,
   Loader,
 } from "lucide-react";
-import { useMetrics } from "@/hooks/useMetrics";
-import { apiFetch } from "@/lib/api";
+import { api } from "@/lib/api";
 import {
   Bar,
   BarChart,
@@ -97,12 +96,12 @@ const colorStyles = {
 };
 
 export default function Overview() {
-  const { data: metrics, isLoading: metricsLoading } = useMetrics();
+  const [metrics, setMetrics] = useState<any>(null);
   const [dailyData, setDailyData] = useState<
-    Array<{ day: string; abertos: number }>
+    Array<{ dia: string; quantidade: number }>
   >([]);
   const [weeklyData, setWeeklyData] = useState<
-    Array<{ semana: string; chamados: number }>
+    Array<{ semana: string; quantidade: number }>
   >([]);
   const [slaData, setSLAData] = useState<{
     dentro_sla: number;
@@ -114,44 +113,50 @@ export default function Overview() {
     taxa_reaberturas: string;
     chamados_backlog: number;
   } | null>(null);
-  const [dataLoading, setDataLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+
     const fetchData = async () => {
       try {
-        setDataLoading(true);
-        const [daily, weekly, sla, performance] = await Promise.all([
-          apiFetch("/api/metrics/chamados-por-dia")
-            .then((r) => r.json())
-            .catch(() => ({ dados: [] })),
-          apiFetch("/api/metrics/chamados-por-semana")
-            .then((r) => r.json())
-            .catch(() => ({ dados: [] })),
-          apiFetch("/api/metrics/sla-distribution")
-            .then((r) => r.json())
-            .catch(() => ({ dentro_sla: 0, fora_sla: 0 })),
-          apiFetch("/api/metrics/performance")
-            .then((r) => r.json())
-            .catch(() => null),
+        setIsLoading(true);
+
+        const [daily, weekly, sla, performance, dashboard] = await Promise.all([
+          api
+            .get("/metrics/chamados-por-dia")
+            .catch(() => ({ data: { dados: [] } })),
+          api
+            .get("/metrics/chamados-por-semana")
+            .catch(() => ({ data: { dados: [] } })),
+          api
+            .get("/metrics/sla-distribution")
+            .catch(() => ({ data: { dentro_sla: 0, fora_sla: 0 } })),
+          api.get("/metrics/performance").catch(() => ({ data: null })),
+          api.get("/metrics/dashboard").catch(() => ({ data: null })),
         ]);
 
-        setDailyData(daily?.dados || []);
-        setWeeklyData(weekly?.dados || []);
-        setSLAData(sla || { dentro_sla: 0, fora_sla: 0 });
-        setPerformanceData(performance);
+        if (!mounted) return;
+
+        setDailyData(daily.data?.dados || []);
+        setWeeklyData(weekly.data?.dados || []);
+        setSLAData(sla.data || { dentro_sla: 0, fora_sla: 0 });
+        setPerformanceData(performance.data);
+        setMetrics(dashboard.data);
       } catch (error) {
         console.error("Erro ao carregar dados do dashboard:", error);
       } finally {
-        setDataLoading(false);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
+    return () => {
+      mounted = false;
+    };
   }, []);
-
-  const isLoading = metricsLoading || dataLoading;
 
   if (isLoading) {
     return (
