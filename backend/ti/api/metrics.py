@@ -135,3 +135,25 @@ def get_performance_metrics(db: Session = Depends(get_db)):
             "taxa_reaberturas": "0%",
             "chamados_backlog": 0
         }
+
+
+@router.get("/metrics/debug/tempo-resposta")
+def debug_tempo_resposta(periodo: str = "mes", db: Session = Depends(get_db)):
+    """
+    Debug: retorna dados brutos de tempo de resposta
+    periodo: "mes", "24h" ou "30dias"
+    """
+    try:
+        historicos = MetricsCalculator.debug_tempo_resposta(db, periodo)
+        return {
+            "status": "ok",
+            "total_registros": len(historicos),
+            "periodo": periodo
+        }
+    except Exception as e:
+        print(f"Erro ao debugar tempo de resposta: {e}")
+        return {
+            "status": "erro",
+            "erro": str(e),
+            "periodo": periodo
+        }
