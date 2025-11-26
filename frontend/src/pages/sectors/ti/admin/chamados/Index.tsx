@@ -21,6 +21,8 @@ import {
   UserPlus,
   Paperclip,
   Image as ImageIcon,
+  Grid3x3,
+  List,
 } from "lucide-react";
 import { ticketsMock } from "../mock";
 import { apiFetch, API_BASE } from "@/lib/api";
@@ -231,6 +233,7 @@ export default function ChamadosPage() {
   // Infinite scroll state
   const [visibleTickets, setVisibleTickets] = useState(6);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const ticketsContainerRef = useRef<HTMLDivElement>(null);
   const loadMoreTicketsRef = useRef<HTMLDivElement>(null);
 
@@ -418,6 +421,12 @@ export default function ChamadosPage() {
     setIsLoadingMore(false);
   }, [filtro]);
 
+  // Reset visible count when view mode changes
+  useEffect(() => {
+    setVisibleTickets(6);
+    setIsLoadingMore(false);
+  }, [viewMode]);
+
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<UiTicket | null>(null);
   const [tab, setTab] = useState<"resumo" | "historico" | "ticket">("resumo");
@@ -568,107 +577,217 @@ export default function ChamadosPage() {
         />
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2 flex-shrink-0">
-        {statusMap.map((s) => (
-          <NavLink
-            key={s.key}
-            to={`/setor/ti/admin/chamados/${s.key}`}
-            className={({ isActive }) =>
-              `rounded-full px-3 py-1.5 text-sm border transition-colors ${isActive ? "bg-primary text-primary-foreground border-transparent" : "bg-secondary hover:bg-secondary/80"}`
-            }
+      {/* Filters and View Toggle */}
+      <div className="flex flex-wrap gap-2 flex-shrink-0 items-center justify-between">
+        <div className="flex flex-wrap gap-2">
+          {statusMap.map((s) => (
+            <NavLink
+              key={s.key}
+              to={`/setor/ti/admin/chamados/${s.key}`}
+              className={({ isActive }) =>
+                `rounded-full px-3 py-1.5 text-sm border transition-colors ${isActive ? "bg-primary text-primary-foreground border-transparent" : "bg-secondary hover:bg-secondary/80"}`
+              }
+            >
+              {s.label}
+            </NavLink>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant={viewMode === "grid" ? "default" : "secondary"}
+            onClick={() => setViewMode("grid")}
+            size="sm"
+            className="inline-flex items-center gap-2"
           >
-            {s.label}
-          </NavLink>
-        ))}
+            <Grid3x3 className="h-4 w-4" />
+            Grade
+          </Button>
+          <Button
+            type="button"
+            variant={viewMode === "list" ? "default" : "secondary"}
+            onClick={() => setViewMode("list")}
+            size="sm"
+            className="inline-flex items-center gap-2"
+          >
+            <List className="h-4 w-4" />
+            Lista
+          </Button>
+        </div>
       </div>
 
-      {/* Tickets Grid com Scroll Infinito */}
+      {/* Tickets Grid/List com Scroll Infinito */}
       <div className="flex-1 overflow-hidden">
         <div
           ref={ticketsContainerRef}
           className="h-full overflow-y-auto pr-2 -mr-2"
         >
-          <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 pb-4">
-            {list.slice(0, visibleTickets).map((t) => (
-              <div
-                key={t.id}
-                onClick={() => {
-                  setSelected(t);
-                  initFromSelected(t);
-                  setOpen(true);
-                }}
-                className="cursor-pointer transition-all hover:scale-105"
-              >
-                <TicketCard
-                  {...t}
-                  onTicket={() => {
+          {viewMode === "grid" && (
+            <div className="grid gap-3 sm:gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 pb-4">
+              {list.slice(0, visibleTickets).map((t) => (
+                <div
+                  key={t.id}
+                  onClick={() => {
                     setSelected(t);
                     initFromSelected(t);
-                    setTab("ticket");
                     setOpen(true);
                   }}
-                  onUpdate={async (id, sel) => {
-                    const statusText =
-                      sel === "ABERTO"
-                        ? "Aberto"
-                        : sel === "EM_ANDAMENTO"
-                          ? "Em andamento"
-                          : sel === "EM_ANALISE"
-                            ? "Em análise"
-                            : sel === "CONCLUIDO"
-                              ? "Concluído"
-                              : "Cancelado";
-                    try {
-                      const r = await apiFetch(`/chamados/${id}/status`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ status: statusText }),
-                      });
-                      if (!r.ok) throw new Error(await r.text());
-                      setItems((prev) =>
-                        prev.map((it) =>
-                          it.id === id ? { ...it, status: sel } : it,
-                        ),
-                      );
-                      if (selected && selected.id === id) {
-                        const hist = await apiFetch(
-                          `/chamados/${id}/historico`,
-                        ).then((x) => x.json());
-                        const arr = hist.items.map((it: any) => ({
-                          t: new Date(it.t).getTime(),
-                          label: it.label,
-                          attachments: it.anexos
-                            ? it.anexos.map((a: any) => a.nome_original)
-                            : undefined,
-                          files: it.anexos
-                            ? it.anexos.map((a: any) => ({
-                                name: a.nome_original,
-                                url: `${API_BASE.replace(/\/api$/, "")}/${a.caminho_arquivo}`,
-                                mime: a.mime_type || undefined,
-                              }))
-                            : undefined,
-                        }));
-                        setHistory(arr);
-                        setTab("historico");
+                  className="cursor-pointer transition-all hover:scale-105"
+                >
+                  <TicketCard
+                    {...t}
+                    onTicket={() => {
+                      setSelected(t);
+                      initFromSelected(t);
+                      setTab("ticket");
+                      setOpen(true);
+                    }}
+                    onUpdate={async (id, sel) => {
+                      const statusText =
+                        sel === "ABERTO"
+                          ? "Aberto"
+                          : sel === "EM_ANDAMENTO"
+                            ? "Em andamento"
+                            : sel === "EM_ANALISE"
+                              ? "Em análise"
+                              : sel === "CONCLUIDO"
+                                ? "Concluído"
+                                : "Cancelado";
+                      try {
+                        const r = await apiFetch(`/chamados/${id}/status`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ status: statusText }),
+                        });
+                        if (!r.ok) throw new Error(await r.text());
+                        setItems((prev) =>
+                          prev.map((it) =>
+                            it.id === id ? { ...it, status: sel } : it,
+                          ),
+                        );
+                        if (selected && selected.id === id) {
+                          const hist = await apiFetch(
+                            `/chamados/${id}/historico`,
+                          ).then((x) => x.json());
+                          const arr = hist.items.map((it: any) => ({
+                            t: new Date(it.t).getTime(),
+                            label: it.label,
+                            attachments: it.anexos
+                              ? it.anexos.map((a: any) => a.nome_original)
+                              : undefined,
+                            files: it.anexos
+                              ? it.anexos.map((a: any) => ({
+                                  name: a.nome_original,
+                                  url: `${API_BASE.replace(/\/api$/, "")}/${a.caminho_arquivo}`,
+                                  mime: a.mime_type || undefined,
+                                }))
+                              : undefined,
+                          }));
+                          setHistory(arr);
+                          setTab("historico");
+                        }
+                        toast({
+                          title: "Status atualizado",
+                          description: `Chamado alterado para: ${statusText}`,
+                        });
+                      } catch (e) {
+                        toast({
+                          title: "Erro",
+                          description: "Falha ao atualizar status",
+                          variant: "destructive",
+                        });
                       }
-                      toast({
-                        title: "Status atualizado",
-                        description: `Chamado alterado para: ${statusText}`,
-                      });
-                    } catch (e) {
-                      toast({
-                        title: "Erro",
-                        description: "Falha ao atualizar status",
-                        variant: "destructive",
-                      });
-                    }
+                    }}
+                    onDelete={(id) => setConfirmId(id)}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {viewMode === "list" && (
+            <div className="space-y-3 pb-4">
+              {list.slice(0, visibleTickets).map((t) => (
+                <div
+                  key={t.id}
+                  onClick={() => {
+                    setSelected(t);
+                    initFromSelected(t);
+                    setOpen(true);
                   }}
-                  onDelete={(id) => setConfirmId(id)}
-                />
-              </div>
-            ))}
-          </div>
+                  className="rounded-lg border border-border/40 bg-card overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-primary/30"
+                >
+                  <div className="p-4">
+                    <div className="flex flex-col gap-3">
+                      {/* Top Row: Código, Título, Status, Data */}
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2 gap-y-0">
+                            <span className="text-xs font-semibold rounded-md bg-primary/10 text-primary px-2.5 py-1 whitespace-nowrap">
+                              {t.codigo}
+                            </span>
+                            <StatusPill status={t.status} />
+                          </div>
+                          <h3 className="font-semibold text-sm leading-tight line-clamp-2">
+                            {t.titulo}
+                          </h3>
+                        </div>
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            {new Date(t.criadoEm).toLocaleDateString("pt-BR")}
+                          </span>
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelected(t);
+                              initFromSelected(t);
+                              setTab("ticket");
+                              setOpen(true);
+                            }}
+                            className="h-8 px-3 whitespace-nowrap"
+                          >
+                            <TicketIcon className="h-3.5 w-3.5 mr-1.5" />
+                            Abrir
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Bottom Row: Detalhes em Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2.5 pt-2 border-t border-border/20">
+                        <div>
+                          <div className="text-xs font-medium text-muted-foreground mb-1">
+                            Solicitante
+                          </div>
+                          <div className="text-sm truncate">
+                            {t.solicitante}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs font-medium text-muted-foreground mb-1">
+                            Problema
+                          </div>
+                          <div className="text-sm truncate">{t.categoria}</div>
+                        </div>
+                        <div className="hidden sm:block">
+                          <div className="text-xs font-medium text-muted-foreground mb-1">
+                            Unidade
+                          </div>
+                          <div className="text-sm truncate">{t.unidade}</div>
+                        </div>
+                        <div className="hidden sm:block">
+                          <div className="text-xs font-medium text-muted-foreground mb-1">
+                            E-mail
+                          </div>
+                          <div className="text-sm truncate">{t.email}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Sentinel para infinite scroll com loading */}
           {visibleTickets < list.length && (

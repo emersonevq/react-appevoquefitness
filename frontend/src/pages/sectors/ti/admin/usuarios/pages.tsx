@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { usuariosMock } from "../mock";
 import { sectors, loadBISubcategories } from "@/data/sectors";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Copy } from "lucide-react";
+import {
+  Copy,
+  Edit,
+  Key,
+  Lock,
+  LogOut,
+  Trash2,
+  Grid3x3,
+  List,
+  MoreVertical,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const normalize = (s: string) => {
   try {
@@ -562,6 +578,12 @@ export function Permissoes() {
   const [editForceReset, setEditForceReset] = useState<boolean>(false);
   const [biSubcategories, setBiSubcategories] = useState<string[]>([]);
 
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [visibleUsers, setVisibleUsers] = useState(9);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const usersContainerRef = useRef<HTMLDivElement>(null);
+  const loadMoreUsersRef = useRef<HTMLDivElement>(null);
+
   const allSectors = useMemo(() => sectors.map((s) => s.title), []);
   const biSector = useMemo(() => sectors.find((s) => s.slug === "bi"), []);
   const isEditBiSelected = editSetores.includes(normalize("Portal de BI"));
@@ -606,6 +628,32 @@ export function Permissoes() {
     return () =>
       window.removeEventListener("users:changed", onChanged as EventListener);
   }, []);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && visibleUsers < users.length) {
+          setIsLoadingMore(true);
+          setTimeout(() => {
+            setVisibleUsers((prev) => Math.min(prev + 9, users.length));
+            setIsLoadingMore(false);
+          }, 300);
+        }
+      },
+      { threshold: 0.5 },
+    );
+
+    if (loadMoreUsersRef.current) {
+      observer.observe(loadMoreUsersRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [visibleUsers, users.length]);
+
+  useEffect(() => {
+    setVisibleUsers(9);
+    setIsLoadingMore(false);
+  }, [viewMode]);
 
   const openEdit = (u: ApiUser) => {
     setEditing(u);
@@ -718,103 +766,284 @@ export function Permissoes() {
 
   return (
     <div className="space-y-3">
-      <div className="card-surface rounded-xl p-4">
-        <div className="font-semibold mb-2">Permissões</div>
-        <p className="text-muted-foreground text-sm">
-          Liste e gerencie os usuários cadastrados.
-        </p>
+      <div className="card-surface rounded-xl p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-2">
+          <div>
+            <div className="font-semibold text-lg">Permissões</div>
+            <p className="text-muted-foreground text-sm">
+              Liste e gerencie os usuários cadastrados.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={viewMode === "grid" ? "default" : "secondary"}
+              onClick={() => setViewMode("grid")}
+              size="sm"
+              className="inline-flex items-center gap-2"
+            >
+              <Grid3x3 className="h-4 w-4" />
+              Grade
+            </Button>
+            <Button
+              type="button"
+              variant={viewMode === "list" ? "default" : "secondary"}
+              onClick={() => setViewMode("list")}
+              size="sm"
+              className="inline-flex items-center gap-2"
+            >
+              <List className="h-4 w-4" />
+              Lista
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div
+        ref={usersContainerRef}
+        className="max-h-[calc(100vh-300px)] overflow-y-auto rounded-lg border border-border/40 p-4"
+      >
         {loading && (
-          <div className="text-sm text-muted-foreground">Carregando...</div>
-        )}
-        {!loading && users.length === 0 && (
-          <div className="text-sm text-muted-foreground">
-            Nenhum usuário encontrado.
+          <div className="text-center py-12">
+            <div className="text-sm text-muted-foreground">
+              Carregando usuários...
+            </div>
           </div>
         )}
-        {users.map((u) => (
-          <div key={u.id} className="card-surface rounded-xl overflow-hidden">
-            <div className="px-4 py-3 border-b border-border/60 bg-muted/30 flex items-center justify-between">
-              <div className="font-semibold">
-                {u.nome} {u.sobrenome}
-              </div>
-              <span className="text-xs rounded-full px-2 py-0.5 bg-secondary">
-                {u.nivel_acesso}
-              </span>
-            </div>
 
-            <div className="p-4 text-sm space-y-2">
-              <div className="grid grid-cols-2 gap-x-6">
-                <div className="text-muted-foreground">Usuário</div>
-                <div className="text-right font-medium">{u.usuario}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-x-6">
-                <div className="text-muted-foreground">E-mail</div>
-                <div className="text-right">{u.email}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-x-6">
-                <div className="text-muted-foreground">Setor</div>
-                <div className="text-right">
-                  {matchSectorTitle((u.setores && u.setores[0]) || u.setor) ||
-                    "—"}
+        {!loading && users.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-sm text-muted-foreground">
+              Nenhum usuário encontrado.
+            </div>
+          </div>
+        )}
+
+        {!loading && users.length > 0 && viewMode === "grid" && (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {users.slice(0, visibleUsers).map((u) => (
+              <div
+                key={u.id}
+                className="card-surface rounded-xl border border-border/40 overflow-hidden hover:shadow-md transition-shadow"
+              >
+                <div className="px-5 py-4 border-b border-border/40 bg-gradient-to-r from-primary/5 to-transparent flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm leading-tight">
+                      {u.nome} {u.sobrenome}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {u.usuario}
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium rounded-full px-2.5 py-1 bg-primary/10 text-primary whitespace-nowrap ml-2">
+                    {u.nivel_acesso}
+                  </span>
+                </div>
+
+                <div className="px-5 py-4 space-y-3">
+                  <div>
+                    <div className="text-xs text-muted-foreground font-medium">
+                      E-mail
+                    </div>
+                    <p className="text-sm break-all">{u.email}</p>
+                  </div>
+                  <div>
+                    <div className="text-xs text-muted-foreground font-medium">
+                      Setor
+                    </div>
+                    <p className="text-sm">
+                      {matchSectorTitle(
+                        (u.setores && u.setores[0]) || u.setor,
+                      ) || "—"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="px-5 py-3 border-t border-border/40 bg-muted/30 flex gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => openEdit(u)}
+                    className="flex-1 inline-flex items-center justify-center gap-2 h-9"
+                  >
+                    <Edit className="h-4 w-4" />
+                    <span className="hidden sm:inline">Editar</span>
+                  </Button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        className="h-9 w-9 p-0"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => regeneratePwd(u)}>
+                        <Key className="h-4 w-4 mr-2" />
+                        Nova senha
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => blockUser(u)}>
+                        <Lock className="h-4 w-4 mr-2" />
+                        Bloquear
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={async () => {
+                          if (!confirm(`Deslogar o usuário ${u.nome}?`)) return;
+                          try {
+                            const res = await fetch(
+                              `/api/usuarios/${u.id}/logout`,
+                              { method: "POST" },
+                            );
+                            if (!res.ok) throw new Error("Falha ao deslogar");
+                            window.dispatchEvent(
+                              new CustomEvent("users:changed"),
+                            );
+                            window.dispatchEvent(
+                              new CustomEvent("auth:refresh"),
+                            );
+                            alert("Usuário deslogado com sucesso.");
+                          } catch (e: any) {
+                            alert(e?.message || "Erro ao deslogar usuário");
+                          }
+                        }}
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Deslogar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => deleteUser(u)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
-            </div>
-
-            <div className="px-4 pb-4 flex flex-wrap gap-2 justify-end">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => openEdit(u)}
-              >
-                Editar
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => regeneratePwd(u)}
-              >
-                Nova senha
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => blockUser(u)}
-              >
-                Bloquear
-              </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={async () => {
-                  if (!confirm(`Deslogar o usuário ${u.nome}?`)) return;
-                  try {
-                    const res = await fetch(`/api/usuarios/${u.id}/logout`, {
-                      method: "POST",
-                    });
-                    if (!res.ok) throw new Error("Falha ao deslogar");
-                    window.dispatchEvent(new CustomEvent("users:changed"));
-                    window.dispatchEvent(new CustomEvent("auth:refresh"));
-                    alert("Usuário deslogado com sucesso.");
-                  } catch (e: any) {
-                    alert(e?.message || "Erro ao deslogar usuário");
-                  }
-                }}
-              >
-                Deslogar
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => deleteUser(u)}
-              >
-                Excluir
-              </Button>
-            </div>
+            ))}
           </div>
-        ))}
+        )}
+
+        {!loading && users.length > 0 && viewMode === "list" && (
+          <div className="space-y-2">
+            {users.slice(0, visibleUsers).map((u) => (
+              <div
+                key={u.id}
+                className="card-surface rounded-lg border border-border/40 overflow-hidden hover:shadow-sm transition-shadow"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-sm">
+                      {u.nome} {u.sobrenome}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {u.usuario}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs sm:text-sm flex-1 sm:flex-none">
+                    <div className="text-muted-foreground">E-mail:</div>
+                    <div className="text-right truncate">{u.email}</div>
+                    <div className="text-muted-foreground">Setor:</div>
+                    <div className="text-right truncate">
+                      {matchSectorTitle(
+                        (u.setores && u.setores[0]) || u.setor,
+                      ) || "—"}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-xs font-medium rounded-full px-2.5 py-1 bg-primary/10 text-primary whitespace-nowrap">
+                      {u.nivel_acesso}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => openEdit(u)}
+                      className="h-8 px-3"
+                    >
+                      <Edit className="h-3.5 w-3.5 mr-1.5" />
+                      Editar
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem onClick={() => regeneratePwd(u)}>
+                          <Key className="h-4 w-4 mr-2" />
+                          Nova senha
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => blockUser(u)}>
+                          <Lock className="h-4 w-4 mr-2" />
+                          Bloquear
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={async () => {
+                            if (!confirm(`Deslogar o usuário ${u.nome}?`))
+                              return;
+                            try {
+                              const res = await fetch(
+                                `/api/usuarios/${u.id}/logout`,
+                                { method: "POST" },
+                              );
+                              if (!res.ok) throw new Error("Falha ao deslogar");
+                              window.dispatchEvent(
+                                new CustomEvent("users:changed"),
+                              );
+                              window.dispatchEvent(
+                                new CustomEvent("auth:refresh"),
+                              );
+                              alert("Usuário deslogado com sucesso.");
+                            } catch (e: any) {
+                              alert(e?.message || "Erro ao deslogar usuário");
+                            }
+                          }}
+                        >
+                          <LogOut className="h-4 w-4 mr-2" />
+                          Deslogar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => deleteUser(u)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!loading && users.length > 0 && (
+          <div ref={loadMoreUsersRef} className="flex justify-center py-8 mt-4">
+            {isLoadingMore && (
+              <div className="text-sm text-muted-foreground">
+                Carregando mais usuários...
+              </div>
+            )}
+            {visibleUsers >= users.length && (
+              <div className="text-xs text-muted-foreground">Fim da lista</div>
+            )}
+          </div>
+        )}
       </div>
 
       <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
