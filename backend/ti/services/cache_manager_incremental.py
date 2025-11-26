@@ -144,11 +144,15 @@ class ChamadosTodayCounter:
             cached.expires_at = proximo_dia
             db.add(cached)
             db.commit()
-            
+
             return new_value
-        
+
         except Exception as e:
             print(f"[CACHE] Erro ao decrementar contador: {e}")
+            try:
+                db.rollback()
+            except:
+                pass
             return ChamadosTodayCounter._recalculate(db)
     
     @staticmethod
