@@ -275,7 +275,9 @@ class MetricsCalculator:
 
     @staticmethod
     def get_sla_compliance_mes(db: Session) -> int:
-        """Calcula percentual de SLA cumprido para todos os chamados do mês - OTIMIZADO"""
+        """Calcula percentual de SLA cumprido para todos os chamados do mês - usa fonte unificada"""
+        from ti.services.sla_metrics_unified import UnifiedSLAMetricsCalculator
+
         # Tenta cache primeiro
         cached = SLACacheManager.get(db, "sla_compliance_mes")
         if cached is not None:
@@ -283,7 +285,8 @@ class MetricsCalculator:
             return cached
 
         print("[CACHE MISS] SLA Compliance Mês calculando...")
-        result = MetricsCalculator._calculate_sla_compliance_mes(db)
+        result_dict = UnifiedSLAMetricsCalculator.get_sla_compliance_month(db)
+        result = result_dict["percentual"]
         print(f"[CACHE SET] SLA Compliance Mês: {result}%")
         SLACacheManager.set(db, "sla_compliance_mes", result)
         return result
