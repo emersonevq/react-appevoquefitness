@@ -61,6 +61,12 @@ export function useAutoRecalculateSLA() {
     },
   });
 
+  // Dispara warmup automaticamente ao montar o componente
+  useEffect(() => {
+    console.log("[SLA] Painel administrativo aberto, iniciando cache warmup...");
+    mutation.mutate();
+  }, []); // Executa apenas uma vez ao montar
+
   return {
     stats: mutation.data,
     isLoading: mutation.isPending,
