@@ -36,13 +36,13 @@ def get_dashboard_metrics(db: Session = Depends(get_db)):
 
 @router.get("/metrics/chamados-abertos")
 def get_chamados_abertos(db: Session = Depends(get_db)):
-    """Retorna quantidade de chamados abertos"""
+    """Retorna quantidade de chamados ativos (não concluídos nem cancelados)"""
     try:
         count = MetricsCalculator.get_abertos_agora(db)
-        return {"abertos": count}
+        return {"ativos": count}
     except Exception as e:
-        print(f"Erro ao contar chamados abertos: {e}")
-        return {"abertos": 0}
+        print(f"Erro ao contar chamados ativos: {e}")
+        return {"ativos": 0}
 
 
 @router.get("/metrics/chamados-hoje")
