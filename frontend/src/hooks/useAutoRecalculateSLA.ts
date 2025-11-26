@@ -31,7 +31,7 @@ export function useAutoRecalculateSLA() {
   useEffect(() => {
     const timer = setTimeout(() => {
       mutation.mutate();
-    }, 100);
+    }, 3000);
     return () => clearTimeout(timer);
   }, [mutation]);
 
