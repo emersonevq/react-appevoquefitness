@@ -1,4 +1,4 @@
-import { PieChart, Pie, Cell, Legend, Tooltip, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 interface SLADistributionProps {
   dentroDaSla: number;
