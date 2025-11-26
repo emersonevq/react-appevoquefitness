@@ -465,6 +465,56 @@ class MetricsCalculator:
         }
 
     @staticmethod
+    def debug_tempo_resposta(db: Session, periodo: str = "mes"):
+        """
+        Debug: mostra os dados brutos de tempo de resposta
+        periodo: "mes", "24h" ou "30dias"
+        """
+        agora = now_brazil_naive()
+
+        if periodo == "mes":
+            inicio = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        elif periodo == "24h":
+            inicio = agora - timedelta(hours=24)
+        else:  # 30dias
+            inicio = agora - timedelta(days=30)
+
+        historicos = db.query(HistoricoStatus).filter(
+            and_(
+                HistoricoStatus.created_at >= inicio,
+                HistoricoStatus.status.in_(["Em Atendimento", "Em análise", "Em andamento"])
+            )
+        ).all()
+
+        print(f"\n{'='*80}")
+        print(f"DEBUG: Tempo de Resposta ({periodo})")
+        print(f"Total de registros encontrados: {len(historicos)}")
+        print(f"Período: {inicio} a {agora}")
+        print(f"{'='*80}")
+
+        # Agrupa por chamado_id para mostrar quantos registros por chamado
+        from collections import Counter
+        chamado_counts = Counter(h.chamado_id for h in historicos)
+        print(f"Total de chamados únicos: {len(chamado_counts)}")
+        print(f"Chamados com múltiplos registros: {sum(1 for c in chamado_counts.values() if c > 1)}")
+        print()
+
+        for h in historicos[:20]:  # Primeiros 20
+            chamado = db.query(Chamado).filter(Chamado.id == h.chamado_id).first()
+            if chamado:
+                delta = h.data_inicio - chamado.data_abertura if h.data_inicio else None
+                horas = delta.total_seconds() / 3600 if delta else 0
+                print(f"Chamado #{h.chamado_id:4d} | Aberto: {chamado.data_abertura} | "
+                      f"Status: {h.status:15s} | Resposta: {h.data_inicio} | Delta: {horas:6.1f}h")
+
+        if len(historicos) > 20:
+            print(f"\n... e mais {len(historicos) - 20} registros")
+
+        print(f"{'='*80}\n")
+
+        return historicos
+
+    @staticmethod
     def get_dashboard_metrics(db: Session) -> dict:
         """Retorna todos os métricas do dashboard"""
         tempo_resposta_mes, total_chamados_mes = MetricsCalculator.get_tempo_medio_resposta_mes(db)
