@@ -49,16 +49,32 @@ def get_sla_metrics(db: Session = Depends(get_db)):
         tempo_resposta_24h = MetricsCalculator.get_tempo_medio_resposta_24h(db)
         sla_distribution = MetricsCalculator.get_sla_distribution(db)
 
+        # Type casting garantido
+        sla_24h = MetricsCalculator.get_sla_compliance_24h(db)
+        sla_mes = MetricsCalculator.get_sla_compliance_mes(db)
+
+        # Garante que são números e não objetos
+        sla_24h_value = int(sla_24h) if isinstance(sla_24h, (int, float)) else 0
+        sla_mes_value = int(sla_mes) if isinstance(sla_mes, (int, float)) else 0
+
         return {
-            "sla_compliance_24h": MetricsCalculator.get_sla_compliance_24h(db),
-            "sla_compliance_mes": MetricsCalculator.get_sla_compliance_mes(db),
-            "sla_distribution": sla_distribution,
+            "sla_compliance_24h": sla_24h_value,
+            "sla_compliance_mes": sla_mes_value,
+            "sla_distribution": sla_distribution if isinstance(sla_distribution, dict) else {
+                "dentro_sla": 0,
+                "fora_sla": 0,
+                "percentual_dentro": 0,
+                "percentual_fora": 0,
+                "total": 0
+            },
             "tempo_resposta_24h": tempo_resposta_24h,
             "tempo_resposta_mes": tempo_resposta_mes,
             "total_chamados_mes": total_chamados_mes,
         }
     except Exception as e:
         print(f"[ERROR] Erro ao calcular métricas SLA: {e}")
+        import traceback
+        traceback.print_exc()
         return {
             "sla_compliance_24h": 0,
             "sla_compliance_mes": 0,
