@@ -706,7 +706,7 @@ export default function ChamadosPage() {
           )}
 
           {viewMode === "list" && (
-            <div className="space-y-2 pb-4">
+            <div className="space-y-3 pb-4">
               {list.slice(0, visibleTickets).map((t) => (
                 <div
                   key={t.id}
@@ -715,66 +715,79 @@ export default function ChamadosPage() {
                     initFromSelected(t);
                     setOpen(true);
                   }}
-                  className="rounded-lg border border-border/40 bg-card p-4 cursor-pointer transition-all hover:shadow-sm hover:border-border/60"
+                  className="rounded-lg border border-border/40 bg-card overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-primary/30"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h3 className="font-semibold text-sm">
-                            {t.codigo}
-                          </h3>
-                          <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
+                  <div className="p-4">
+                    <div className="flex flex-col gap-3">
+                      {/* Top Row: Código, Título, Status, Data */}
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+                        <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                          <div className="flex items-center gap-2 gap-y-0">
+                            <span className="text-xs font-semibold rounded-md bg-primary/10 text-primary px-2.5 py-1 whitespace-nowrap">
+                              {t.codigo}
+                            </span>
+                            <StatusPill status={t.status} />
+                          </div>
+                          <h3 className="font-semibold text-sm leading-tight line-clamp-2">
                             {t.titulo}
-                          </p>
+                          </h3>
                         </div>
-                        <StatusPill status={t.status} />
-                      </div>
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs mt-3 sm:hidden">
-                        <div className="text-muted-foreground">Solicitante:</div>
-                        <div className="text-right">{t.solicitante}</div>
-                        <div className="text-muted-foreground">Problema:</div>
-                        <div className="text-right">{t.categoria}</div>
-                      </div>
-                    </div>
-
-                    <div className="hidden sm:grid grid-cols-4 gap-x-4 gap-y-1.5 text-xs flex-shrink-0 w-full sm:w-auto">
-                      <div>
-                        <div className="text-muted-foreground">Solicitante</div>
-                        <div className="text-right">{t.solicitante}</div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground">Problema</div>
-                        <div className="text-right">{t.categoria}</div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground">Unidade</div>
-                        <div className="text-right">{t.unidade}</div>
-                      </div>
-                      <div>
-                        <div className="text-muted-foreground">Data</div>
-                        <div className="text-right">
-                          {new Date(t.criadoEm).toLocaleDateString()}
+                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                          <span className="text-xs text-muted-foreground whitespace-nowrap">
+                            {new Date(t.criadoEm).toLocaleDateString("pt-BR")}
+                          </span>
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelected(t);
+                              initFromSelected(t);
+                              setTab("ticket");
+                              setOpen(true);
+                            }}
+                            className="h-8 px-3 whitespace-nowrap"
+                          >
+                            <TicketIcon className="h-3.5 w-3.5 mr-1.5" />
+                            Abrir
+                          </Button>
                         </div>
                       </div>
-                    </div>
 
-                    <div className="flex gap-2 flex-shrink-0">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelected(t);
-                          initFromSelected(t);
-                          setTab("ticket");
-                          setOpen(true);
-                        }}
-                        className="h-8 px-3"
-                      >
-                        <TicketIcon className="h-3.5 w-3.5 mr-1.5" />
-                        Abrir
-                      </Button>
+                      {/* Bottom Row: Detalhes em Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2.5 pt-2 border-t border-border/20">
+                        <div>
+                          <div className="text-xs font-medium text-muted-foreground mb-1">
+                            Solicitante
+                          </div>
+                          <div className="text-sm truncate">
+                            {t.solicitante}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs font-medium text-muted-foreground mb-1">
+                            Problema
+                          </div>
+                          <div className="text-sm truncate">
+                            {t.categoria}
+                          </div>
+                        </div>
+                        <div className="hidden sm:block">
+                          <div className="text-xs font-medium text-muted-foreground mb-1">
+                            Unidade
+                          </div>
+                          <div className="text-sm truncate">
+                            {t.unidade}
+                          </div>
+                        </div>
+                        <div className="hidden sm:block">
+                          <div className="text-xs font-medium text-muted-foreground mb-1">
+                            E-mail
+                          </div>
+                          <div className="text-sm truncate">
+                            {t.email}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
