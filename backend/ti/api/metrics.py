@@ -124,35 +124,64 @@ def get_sla_metrics(db: Session = Depends(get_db)):
 @router.get("/metrics/dashboard")
 def get_dashboard_metrics(db: Session = Depends(get_db)):
     """
-    Retorna todas as métricas do dashboard administrativo em tempo real.
+    Endpoint consolidado: Retorna TODAS as métricas do dashboard administrativo.
+
+    Combina:
+    - Métricas rápidas (realtime)
+    - Métricas de SLA (com cache)
+    - Métricas de performance
 
     Retorna:
     - chamados_hoje: Quantidade de chamados abertos hoje
     - comparacao_ontem: Comparação com ontem (hoje, ontem, percentual, direcao)
-    - tempo_resposta_24h: Tempo médio de primeira resposta nas últimas 24h
-    - tempo_resposta_mes: Tempo médio de primeira resposta deste mês
-    - total_chamados_mes: Total de chamados abertos neste mês
-    - sla_compliance_24h: Percentual de SLA cumprido nas últimas 24h
-    - abertos_agora: Quantidade de chamados com status "Aberto"
-    - tempo_resolucao_30dias: Tempo médio de resolução dos últimos 30 dias
+    - tempo_resposta_24h: Tempo médio de primeira resposta 24h
+    - tempo_resposta_mes: Tempo médio de primeira resposta mês
+    - total_chamados_mes: Total de chamados deste mês
+    - sla_compliance_24h: Percentual de SLA cumprido (últimos chamados ativos)
+    - sla_compliance_mes: Percentual de SLA cumprido (mês)
+    - sla_distribution: Distribuição dentro/fora SLA
+    - abertos_agora: Quantidade de chamados ativos
+    - tempo_resolucao_30dias: Tempo médio de resolução (30 dias)
+    - timestamp: Momento do cálculo
     """
     try:
-        metrics = MetricsCalculator.get_dashboard_metrics(db)
-        return metrics
+        # Obtém todas as métricas
+        realtime = get_realtime_metrics(db)
+        sla = get_sla_metrics(db)
+        performance = MetricsCalculator.get_performance_metrics(db)
+
+        return {
+            # Realtime
+            "chamados_hoje": realtime["chamados_hoje"],
+            "comparacao_ontem": realtime["comparacao_ontem"],
+            "abertos_agora": realtime["abertos_agora"],
+
+            # SLA
+            "sla_compliance_24h": sla["sla_compliance_24h"],
+            "sla_compliance_mes": sla["sla_compliance_mes"],
+            "sla_distribution": sla["sla_distribution"],
+            "tempo_resposta_24h": sla["tempo_resposta_24h"],
+            "tempo_resposta_mes": sla["tempo_resposta_mes"],
+            "total_chamados_mes": sla["total_chamados_mes"],
+
+            # Performance
+            "tempo_resolucao_30dias": performance["tempo_resolucao_medio"],
+            "primeira_resposta_media": performance["primeira_resposta_media"],
+            "taxa_reaberturas": performance["taxa_reaberturas"],
+            "chamados_backlog": performance["chamados_backlog"],
+
+            # Metadata
+            "timestamp": now_brazil_naive().isoformat(),
+        }
     except Exception as e:
-        print(f"[ERROR] Erro ao calcular métricas: {e}")
+        print(f"[ERROR] Erro ao calcular métricas do dashboard: {e}")
         import traceback
         traceback.print_exc()
-        return {
-            "chamados_hoje": 0,
-            "comparacao_ontem": {"hoje": 0, "ontem": 0, "percentual": 0, "direcao": "up"},
-            "tempo_resposta_24h": "—",
-            "tempo_resposta_mes": "—",
-            "total_chamados_mes": 0,
-            "sla_compliance_24h": 0,
-            "abertos_agora": 0,
-            "tempo_resolucao_30dias": "—",
-        }
+        from fastapi import HTTPException
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao calcular métricas do dashboard: {str(e)}"
+        )
 
 
 @router.get("/metrics/chamados-abertos")
