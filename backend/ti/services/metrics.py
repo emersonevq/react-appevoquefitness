@@ -522,9 +522,10 @@ class MetricsCalculator:
 
     @staticmethod
     def _calculate_sla_distribution(db: Session) -> dict:
-        """Cálculo real - usa MESMOS critérios que get_sla_compliance_mes"""
+        """Cálculo real - usa MESMOS critérios que get_sla_compliance_mes - OTIMIZADO"""
         try:
             from ti.services.sla import SLACalculator
+            from ti.models.historico_status import HistoricoStatus
 
             agora = now_brazil_naive()
             mes_inicio = agora.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -547,6 +548,19 @@ class MetricsCalculator:
                 ).all()
             }
 
+            # PRÉ-CARREGA TODOS os históricos de UMA VEZ (otimização crítica)
+            chamado_ids = [c.id for c in chamados_mes]
+            historicos_bulk = db.query(HistoricoStatus).filter(
+                HistoricoStatus.chamado_id.in_(chamado_ids)
+            ).all() if chamado_ids else []
+
+            # Cache: {chamado_id: [historicos]}
+            historicos_cache = {}
+            for hist in historicos_bulk:
+                if hist.chamado_id not in historicos_cache:
+                    historicos_cache[hist.chamado_id] = []
+                historicos_cache[hist.chamado_id].append(hist)
+
             dentro_sla = 0
             fora_sla = 0
 
@@ -561,7 +575,8 @@ class MetricsCalculator:
                         chamado.id,
                         chamado.data_abertura,
                         data_final,
-                        db
+                        db,
+                        historicos_cache
                     )
 
                     if tempo_resolucao_horas <= sla_config.tempo_resolucao_horas:
