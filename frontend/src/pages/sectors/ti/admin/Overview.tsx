@@ -169,9 +169,9 @@ export default function Overview() {
           trend={metrics && metrics.sla_compliance_24h >= 80 ? "up" : "down"}
         />
         <Metric
-          label="Abertos agora"
+          label="Chamados ativos"
           value={String(metrics?.abertos_agora || 0)}
-          sub="em aberto"
+          sub="não concluídos"
           variant="purple"
           icon={AlertCircle}
         />
