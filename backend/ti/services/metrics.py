@@ -308,9 +308,8 @@ class MetricsCalculator:
         tempos_primeira_resposta = []
         historicos_primeiro_atendimento = db.query(HistoricoStatus).filter(
             and_(
-                HistoricoStatus.criado_em >= trinta_dias_atras,
-                HistoricoStatus.status_anterior == "Aberto",
-                HistoricoStatus.status_novo != "Aberto"
+                HistoricoStatus.created_at >= trinta_dias_atras,
+                HistoricoStatus.status.in_(["Em Atendimento", "Em análise", "Em andamento"])
             )
         ).all()
 
@@ -320,8 +319,8 @@ class MetricsCalculator:
                     Chamado.id == historico.chamado_id
                 ).first()
 
-                if chamado and chamado.data_abertura and historico.criado_em:
-                    delta = historico.criado_em - chamado.data_abertura
+                if chamado and chamado.data_abertura and historico.data_inicio:
+                    delta = historico.data_inicio - chamado.data_abertura
                     minutos_delta = delta.total_seconds() / 60
                     if minutos_delta >= 0:  # Apenas valores positivos
                         tempos_primeira_resposta.append(minutos_delta)
