@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { useMemo, useState, useEffect } from "react";
 import { useAuthContext } from "@/lib/auth-context";
+import { TIDashboard } from "@/components/ti-dashboard/TIDashboard";
 
 interface Ticket {
   id: string;
