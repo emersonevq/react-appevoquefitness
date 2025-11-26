@@ -97,6 +97,7 @@ const colorStyles = {
 };
 
 export default function Overview() {
+  const { warmupCache } = useSLACacheManager();
   const [metrics, setMetrics] = useState<any>(null);
   const [dailyData, setDailyData] = useState<
     Array<{ dia: string; quantidade: number }>
@@ -122,6 +123,13 @@ export default function Overview() {
     const fetchData = async () => {
       try {
         setIsLoading(true);
+
+        // Pré-aquece cache de SLA para melhor performance
+        try {
+          await warmupCache();
+        } catch (error) {
+          console.warn("Aviso: Pré-aquecimento de cache falhou, prosseguindo com dados em tempo real");
+        }
 
         // Carrega métricas RÁPIDAS primeiro
         const basicMetrics = await api
