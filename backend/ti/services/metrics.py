@@ -46,7 +46,7 @@ class MetricsCalculator:
         ontem = agora - timedelta(hours=24)
 
         try:
-            # Pega apenas a PRIMEIRA mudança de status por chamado nas últimas 24h
+            # Subquery para pegar apenas a PRIMEIRA resposta por chamado nas últimas 24h
             subquery = db.query(
                 HistoricoStatus.chamado_id,
                 func.min(HistoricoStatus.created_at).label('primeira_resposta_at')
@@ -57,37 +57,32 @@ class MetricsCalculator:
                 )
             ).group_by(HistoricoStatus.chamado_id).subquery()
 
-            # Busca os históricos correspondentes à primeira resposta
-            primeiras_respostas = db.query(
-                HistoricoStatus.chamado_id,
-                HistoricoStatus.data_inicio
+            # Busca os históricos da primeira resposta + dados do chamado (JOIN direto)
+            resultados = db.query(
+                HistoricoStatus.data_inicio,
+                Chamado.data_abertura
             ).join(
                 subquery,
                 and_(
                     HistoricoStatus.chamado_id == subquery.c.chamado_id,
                     HistoricoStatus.created_at == subquery.c.primeira_resposta_at
                 )
+            ).join(
+                Chamado,
+                Chamado.id == HistoricoStatus.chamado_id
             ).all()
 
-            if not primeiras_respostas:
+            if not resultados:
                 return "—"
-
-            # Busca todos os chamados de uma vez (evita N+1 queries)
-            chamado_ids = [pr.chamado_id for pr in primeiras_respostas]
-            chamados = db.query(Chamado).filter(
-                Chamado.id.in_(chamado_ids)
-            ).all()
-
-            chamados_dict = {c.id: c for c in chamados}
 
             # Calcula os tempos
             tempos = []
-            for pr in primeiras_respostas:
-                chamado = chamados_dict.get(pr.chamado_id)
-                if chamado and chamado.data_abertura and pr.data_inicio:
-                    delta = pr.data_inicio - chamado.data_abertura
+            for data_inicio, data_abertura in resultados:
+                if data_inicio and data_abertura:
+                    delta = data_inicio - data_abertura
                     horas = delta.total_seconds() / 3600
-                    if 0 <= horas <= 168:  # Máximo 1 semana (filtro de sanidade)
+                    # Filtro de sanidade: apenas valores entre 0 e 72h
+                    if 0 <= horas <= 72:
                         tempos.append(horas)
 
             if not tempos:
@@ -104,6 +99,8 @@ class MetricsCalculator:
                 return f"{horas}h {minutos}m" if minutos > 0 else f"{horas}h"
         except Exception as e:
             print(f"Erro ao calcular tempo de resposta: {e}")
+            import traceback
+            traceback.print_exc()
             return "—"
 
     @staticmethod
