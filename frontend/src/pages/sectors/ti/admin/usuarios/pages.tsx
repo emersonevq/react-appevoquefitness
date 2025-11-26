@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { usuariosMock } from "../mock";
 import { sectors, loadBISubcategories } from "@/data/sectors";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,23 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Copy } from "lucide-react";
+import {
+  Copy,
+  Edit,
+  Key,
+  Lock,
+  LogOut,
+  Trash2,
+  Grid3x3,
+  List,
+  MoreVertical,
+} from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const normalize = (s: string) => {
   try {
@@ -148,7 +164,7 @@ export function CriarUsuario() {
     await checkAvailability("email", email);
     await checkAvailability("username", username);
     if (emailTaken || usernameTaken) {
-      alert("E-mail ou usuário já cadastrado.");
+      alert("E-mail ou usu��rio já cadastrado.");
       return;
     }
     if (!generatedPassword) {
@@ -965,7 +981,7 @@ export function Permissoes() {
           <DialogHeader>
             <DialogTitle>Nova senha gerada</DialogTitle>
             <DialogDescription>
-              Guarde a senha com segurança. Ela será exibida apenas uma vez.
+              Guarde a senha com seguran��a. Ela será exibida apenas uma vez.
             </DialogDescription>
           </DialogHeader>
           {pwdDialog.pwd && (
