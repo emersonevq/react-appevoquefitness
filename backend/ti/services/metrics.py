@@ -512,7 +512,8 @@ class MetricsCalculator:
                 and_(
                     Chamado.data_abertura >= semana_inicio,
                     Chamado.data_abertura < semana_fim,
-                    Chamado.status != "Cancelado"
+                    Chamado.status != "Cancelado",
+                    Chamado.is_deleted == False
                 )
             ).count()
 
