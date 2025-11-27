@@ -15,15 +15,17 @@ import {
   Shield,
   Zap,
   Clock,
+  LogIn,
 } from "lucide-react";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuthContext();
+  const { login, loginWithAuth0 } = useAuthContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAuth0Loading, setIsAuth0Loading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -49,6 +51,17 @@ export default function Login() {
       alert(err?.message || "Falha ao autenticar");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAuth0Login = async () => {
+    setIsAuth0Loading(true);
+    try {
+      await loginWithAuth0();
+    } catch (error) {
+      console.error("Erro ao fazer login com Auth0:", error);
+      alert("Erro ao conectar com Microsoft. Tente novamente.");
+      setIsAuth0Loading(false);
     }
   };
 
@@ -89,6 +102,44 @@ export default function Login() {
                 Acesse o portal para abrir chamados, acompanhar solicitações e
                 obter suporte técnico especializado.
               </p>
+            </div>
+
+            {/* Auth0 Microsoft Login Button */}
+            <Button
+              onClick={handleAuth0Login}
+              disabled={isAuth0Loading}
+              className="w-full h-11 rounded-md mb-6 bg-blue-600 hover:bg-blue-700 text-white font-medium flex items-center justify-center gap-2 group"
+            >
+              {isAuth0Loading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Conectando...</span>
+                </div>
+              ) : (
+                <>
+                  <svg
+                    className="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z" />
+                  </svg>
+                  <span>Entrar com Microsoft</span>
+                  <LogIn className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </Button>
+
+            {/* Divisor */}
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border/60"></div>
+              </div>
+              <div className="relative flex justify-center text-xs">
+                <span className="px-2 bg-card text-muted-foreground">
+                  Ou use sua senha
+                </span>
+              </div>
             </div>
 
             {/* Formulário */}
