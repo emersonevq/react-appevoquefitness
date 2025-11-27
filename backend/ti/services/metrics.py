@@ -481,7 +481,8 @@ class MetricsCalculator:
                 and_(
                     Chamado.data_abertura >= dia_inicio,
                     Chamado.data_abertura < dia_fim,
-                    Chamado.status != "Cancelado"
+                    Chamado.status != "Cancelado",
+                    Chamado.is_deleted == False
                 )
             ).count()
 
