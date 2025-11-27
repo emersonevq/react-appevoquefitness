@@ -279,6 +279,7 @@ def criar_chamado_com_anexos(
         try:
             Chamado.__table__.create(bind=engine, checkfirst=True)
             ChamadoAnexo.__table__.create(bind=engine, checkfirst=True)
+            HistoricoAnexo.__table__.create(bind=engine, checkfirst=True)
             _ensure_column("chamado_anexo", "conteudo", "MEDIUMBLOB NULL")
         except Exception:
             pass
