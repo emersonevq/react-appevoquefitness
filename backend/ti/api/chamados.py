@@ -610,14 +610,20 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session 
 
             # FECHAR HISTÓRICO ANTERIOR: Se o último status não tem data_fim, preencher
             agora = now_brazil_naive()
-            ultimo_historico = db.query(HistoricoStatus).filter(
-                HistoricoStatus.chamado_id == ch.id
-            ).order_by(HistoricoStatus.data_inicio.desc()).first()
+            try:
+                ultimo_historico = db.query(HistoricoStatus).filter(
+                    HistoricoStatus.chamado_id == ch.id
+                ).order_by(HistoricoStatus.data_inicio.desc()).first()
 
-            if ultimo_historico and not ultimo_historico.data_fim:
-                ultimo_historico.data_fim = agora
-                db.add(ultimo_historico)
-                db.commit()
+                if ultimo_historico and not ultimo_historico.data_fim:
+                    ultimo_historico.data_fim = agora
+                    db.add(ultimo_historico)
+                    db.commit()
+            except Exception as e:
+                print(f"[HISTORICO - Fechar anterior ERROR] {e}")
+                import traceback
+                traceback.print_exc()
+                db.rollback()
 
             dados = json.dumps({
                 "id": ch.id,
