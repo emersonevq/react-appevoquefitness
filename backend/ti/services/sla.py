@@ -275,7 +275,9 @@ class SLACalculator:
                 "data_conclusao": None,
             }
 
-        data_abertura = chamado.data_abertura or now_brazil_naive()
+        data_abertura = chamado.data_abertura
+        if not data_abertura:
+            data_abertura = now_brazil_naive()
         agora = now_brazil_naive()
         is_closed = chamado.status in SLAStatusDeterminer.CLOSED_STATUSES
 
