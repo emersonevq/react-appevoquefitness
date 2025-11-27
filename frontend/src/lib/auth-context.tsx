@@ -119,7 +119,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth0IsLoading) {
       syncUserWithBackend();
     }
-  }, [auth0IsAuthenticated, auth0User?.email, auth0IsLoading, getAccessTokenSilently]);
+  }, [
+    auth0IsAuthenticated,
+    auth0User?.email,
+    auth0IsLoading,
+    getAccessTokenSilently,
+  ]);
 
   const login = async (email?: string, password?: string) => {
     // Legacy login method - not used with Auth0, kept for compatibility
@@ -130,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     sessionStorage.removeItem("evoque-fitness-auth");
     localStorage.removeItem("evoque-fitness-auth");
-    
+
     // Auth0 logout with redirect
     auth0Logout({
       logoutParams: {
