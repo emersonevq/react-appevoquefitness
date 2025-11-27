@@ -34,8 +34,7 @@ class MetricsCalculator:
             count = db.query(Chamado).filter(
                 and_(
                     Chamado.status != "Concluido",
-                    Chamado.status != "Cancelado",
-                    Chamado.is_deleted == False
+                    Chamado.status != "Cancelado"
                 )
             ).count()
 
