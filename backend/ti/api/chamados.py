@@ -156,10 +156,9 @@ def criar_chamado(payload: ChamadoCreate, db: Session = Depends(get_db)):
             )
             db.add(n)
             db.commit()
-            db.refresh(n)
-            import anyio
-            anyio.from_thread.run(sio.emit, "chamado:created", {"id": ch.id})
-            anyio.from_thread.run(sio.emit, "notification:new", {
+
+            # Capturar dados antes de detach
+            notification_data = {
                 "id": n.id,
                 "tipo": n.tipo,
                 "titulo": n.titulo,
@@ -170,17 +169,29 @@ def criar_chamado(payload: ChamadoCreate, db: Session = Depends(get_db)):
                 "dados": n.dados,
                 "lido": n.lido,
                 "criado_em": n.criado_em.isoformat() if n.criado_em else None,
-            })
-            # EMITE ATUALIZAÇÃO DE MÉTRICAS EM TEMPO REAL
-            from ti.services.cache_manager_incremental import IncrementalMetricsCache
-            metricas = IncrementalMetricsCache.get_metrics(db)
-            anyio.from_thread.run(sio.emit, "metrics:updated", {
-                "chamados_hoje": chamados_hoje,
-                "sla_metrics": metricas,
-                "timestamp": now_brazil_naive().isoformat(),
-            })
+            }
+
+            # Detach objects before async operations
+            db.expunge(ch)
+            db.expunge(n)
+
+            try:
+                import anyio
+                anyio.from_thread.run(sio.emit, "chamado:created", {"id": ch.id})
+                anyio.from_thread.run(sio.emit, "notification:new", notification_data)
+                # EMITE ATUALIZAÇÃO DE MÉTRICAS EM TEMPO REAL
+                from ti.services.cache_manager_incremental import IncrementalMetricsCache
+                metricas = IncrementalMetricsCache.get_metrics(db)
+                anyio.from_thread.run(sio.emit, "metrics:updated", {
+                    "chamados_hoje": chamados_hoje,
+                    "sla_metrics": metricas,
+                    "timestamp": now_brazil_naive().isoformat(),
+                })
+            except Exception as e:
+                print(f"[WebSocket] Erro ao emitir eventos: {e}")
+                pass
         except Exception as e:
-            print(f"[WebSocket] Erro ao emitir eventos: {e}")
+            print(f"[Notification] Erro ao criar notificação: {e}")
             pass
         try:
             send_async(send_chamado_abertura, ch)
