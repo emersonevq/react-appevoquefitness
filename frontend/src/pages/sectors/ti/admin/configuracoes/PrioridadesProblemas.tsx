@@ -125,7 +125,7 @@ export function PrioridadesProblemas() {
             if (Array.isArray(detail)) {
               errorMsg = detail
                 .map((e: any) =>
-                  typeof e === "string" ? e : (e.msg || "Erro de validação")
+                  typeof e === "string" ? e : e.msg || "Erro de validação",
                 )
                 .join("; ");
             } else {
@@ -222,7 +222,8 @@ export function PrioridadesProblemas() {
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
       const matchesPrioridade =
-        filterPrioridade === "Todos" || problema.prioridade === filterPrioridade;
+        filterPrioridade === "Todos" ||
+        problema.prioridade === filterPrioridade;
       return matchesSearch && matchesPrioridade;
     });
   }, [problemas, searchTerm, filterPrioridade]);
@@ -230,10 +231,7 @@ export function PrioridadesProblemas() {
   const totalPages = Math.ceil(filteredProblemas.length / ITEMS_PER_PAGE);
   const paginatedProblemas = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredProblemas.slice(
-      startIndex,
-      startIndex + ITEMS_PER_PAGE
-    );
+    return filteredProblemas.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredProblemas, currentPage]);
 
   const handlePageChange = (page: number) => {
@@ -398,9 +396,7 @@ export function PrioridadesProblemas() {
                 : "space-y-3"
             }
           >
-            {paginatedProblemas.map((problema) =>
-              renderProblemaCard(problema)
-            )}
+            {paginatedProblemas.map((problema) => renderProblemaCard(problema))}
           </div>
 
           {totalPages > 1 && (
@@ -419,7 +415,7 @@ export function PrioridadesProblemas() {
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                   .slice(
                     Math.max(0, currentPage - 2),
-                    Math.min(totalPages, currentPage + 1)
+                    Math.min(totalPages, currentPage + 1),
                   )
                   .map((page) => (
                     <Button
@@ -537,9 +533,7 @@ export function PrioridadesProblemas() {
               >
                 Cancelar
               </Button>
-              <Button type="submit">
-                {editingId ? "Atualizar" : "Criar"}
-              </Button>
+              <Button type="submit">{editingId ? "Atualizar" : "Criar"}</Button>
             </div>
           </form>
         </DialogContent>
