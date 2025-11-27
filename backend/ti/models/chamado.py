@@ -33,6 +33,7 @@ class Chamado(Base):
     cancelado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     usuario_id: Mapped[int | None] = mapped_column(Integer, ForeignKey("user.id"), nullable=True)
+    deletado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     anexos: Mapped[list["ChamadoAnexo"]] = relationship("ChamadoAnexo", cascade="all, delete-orphan", back_populates="chamado")
     historicos_status: Mapped[list["HistoricoStatus"]] = relationship("HistoricoStatus", cascade="all, delete-orphan", back_populates="chamado")
