@@ -65,7 +65,7 @@ class MetricsCalculator:
             ).all()
 
             if not chamados:
-                return "���"
+                return "—"
 
             # Calcula os tempos em horas de NEGÓCIO
             tempos = []
@@ -393,8 +393,7 @@ class MetricsCalculator:
             chamados_hoje = db.query(Chamado).filter(
                 and_(
                     Chamado.data_abertura >= hoje_inicio,
-                    Chamado.status != "Cancelado",
-                    Chamado.is_deleted == False
+                    Chamado.status != "Cancelado"
                 )
             ).count()
 
@@ -402,8 +401,7 @@ class MetricsCalculator:
                 and_(
                     Chamado.data_abertura >= ontem_inicio,
                     Chamado.data_abertura < ontem_fim,
-                    Chamado.status != "Cancelado",
-                    Chamado.is_deleted == False
+                    Chamado.status != "Cancelado"
                 )
             ).count()
 
