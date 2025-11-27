@@ -11,6 +11,13 @@ class ProblemaCreate(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True, extra="ignore")
 
+class ProblemaUpdate(BaseModel):
+    prioridade: str | None = None
+    tempo_resolucao_horas: int | None = None
+    requer_internet: bool | None = None
+
+    model_config = ConfigDict(populate_by_name=True, extra="ignore")
+
 class ProblemaOut(BaseModel):
     id: int
     nome: str
