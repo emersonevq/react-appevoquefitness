@@ -818,11 +818,12 @@ export default function ChamadosPage() {
       <Dialog open={!!confirmId} onOpenChange={(o) => !o && setConfirmId(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Remover chamado</DialogTitle>
+            <DialogTitle>Excluir chamado</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              O chamado será removido da visualização, mas mantido em segurança no banco de dados para fins de auditoria.
+              Esta ação apagará definitivamente o chamado e não poderá ser
+              desfeita.
             </p>
             <div className="grid gap-2">
               <label className="text-sm font-medium">Confirme sua senha</label>
@@ -860,13 +861,13 @@ export default function ChamadosPage() {
                     setConfirmPwd("");
                     toast({
                       title: "Sucesso",
-                      description: "Chamado removido com sucesso",
+                      description: "Chamado excluído com sucesso",
                     });
                   } catch (e) {
                     toast({
                       title: "Erro",
                       description:
-                        e instanceof Error ? e.message : "Erro ao remover",
+                        e instanceof Error ? e.message : "Erro ao excluir",
                       variant: "destructive",
                     });
                   } finally {
@@ -874,7 +875,7 @@ export default function ChamadosPage() {
                   }
                 }}
               >
-                {confirmLoading ? "Removendo..." : "Confirmar remoção"}
+                {confirmLoading ? "Excluindo..." : "Confirmar exclusão"}
               </Button>
             </div>
           </div>
