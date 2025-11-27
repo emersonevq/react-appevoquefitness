@@ -822,8 +822,8 @@ export default function ChamadosPage() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Esta ação apagará definitivamente o chamado e não poderá ser
-              desfeita.
+              O chamado será removido da sua visualização, mas permanecerá
+              armazenado no banco de dados para fins de auditoria.
             </p>
             <div className="grid gap-2">
               <label className="text-sm font-medium">Confirme sua senha</label>
