@@ -147,7 +147,7 @@ def listar_chamados(db: Session = Depends(get_db)):
         except Exception:
             pass
         try:
-            return db.query(Chamado).order_by(Chamado.id.desc()).all()
+            return db.query(Chamado).filter(Chamado.is_deleted == False).order_by(Chamado.id.desc()).all()
         except Exception:
             return []
     except Exception as e:
