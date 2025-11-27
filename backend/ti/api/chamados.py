@@ -87,25 +87,46 @@ def _sincronizar_sla(db: Session, chamado: Chamado, status_anterior: str | None 
 
 
 def _normalize_status(s: str) -> str:
+    """
+    Normaliza o status para o formato padrão.
+    Formatos aceitos: Aberto, Em andamento, Em análise, Concluído, Cancelado
+    """
     if not s:
         return "Aberto"
-    s_up = s.strip().upper()
-    mapping = {
-        "ABERTO": "Aberto",
-        "AGUARDANDO": "Em andamento",
-        "EM_ANDAMENTO": "Em andamento",
-        "EM ANDAMENTO": "Em andamento",
-        "EM_ANALISE": "Em análise",
-        "EM ANÁLISE": "Em análise",
-        "EM ANALISE": "Em análise",
-        "CONCLUIDO": "Concluído",
-        "CONCLUÍDO": "Concluído",
-        "CANCELADO": "Cancelado",
+    
+    # Remove espaços extras e converte para lowercase para comparação
+    s_lower = s.strip().lower()
+    
+    # Mapeamento direto baseado em lowercase
+    mapping_lower = {
+        "aberto": "Aberto",
+        "em andamento": "Em andamento",
+        "emandamento": "Em andamento",
+        "em_andamento": "Em andamento",
+        "aguardando": "Em andamento",
+        "em análise": "Em análise",
+        "em analise": "Em análise",
+        "emanalise": "Em análise",
+        "em_analise": "Em análise",
+        "em_análise": "Em análise",
+        "analise": "Em análise",
+        "análise": "Em análise",
+        "concluído": "Concluído",
+        "concluido": "Concluído",
+        "finalizado": "Concluído",
+        "cancelado": "Cancelado",
     }
-    if s_up in mapping:
-        return mapping[s_up]
-    s_title = s.strip().title()
-    return s_title if s_title in ALLOWED_STATUSES else "Aberto"
+    
+    if s_lower in mapping_lower:
+        return mapping_lower[s_lower]
+    
+    # Se não encontrou, verifica se já está no formato correto
+    if s in ALLOWED_STATUSES:
+        return s
+    
+    # Caso padrão
+    print(f"[NORMALIZE] Status não reconhecido: '{s}' - retornando 'Aberto'")
+    return "Aberto" 
 
 @router.get("", response_model=list[ChamadoOut])
 def listar_chamados(db: Session = Depends(get_db)):
