@@ -302,11 +302,12 @@ class IncrementalMetricsCache:
             
             # Determina se está dentro/fora SLA
             agora = now_brazil_naive()
+            data_abertura = chamado.data_abertura or agora
             data_final = chamado.data_conclusao if chamado.data_conclusao else agora
-            
+
             tempo_resolucao = SLACalculator.calculate_business_hours_excluding_paused(
                 chamado.id,
-                chamado.data_abertura,
+                data_abertura,
                 data_final,
                 db
             )
