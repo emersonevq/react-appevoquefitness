@@ -575,14 +575,15 @@ def obter_historico(chamado_id: int, db: Session = Depends(get_db)):
 @router.patch("/{chamado_id}/status", response_model=ChamadoOut)
 def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session = Depends(get_db)):
     try:
-        novo = _normalize_status(payload.status)
-        if novo not in ALLOWED_STATUSES:
-            raise HTTPException(status_code=400, detail="Status inválido")
-        ch = db.query(Chamado).filter(Chamado.id == chamado_id).first()
-        if not ch:
-            raise HTTPException(status_code=404, detail="Chamado não encontrado")
-        prev = ch.status or "Aberto"
-        ch.status = novo
+        try:
+            novo = _normalize_status(payload.status)
+            if novo not in ALLOWED_STATUSES:
+                raise HTTPException(status_code=400, detail="Status inválido")
+            ch = db.query(Chamado).filter(Chamado.id == chamado_id).first()
+            if not ch:
+                raise HTTPException(status_code=404, detail="Chamado não encontrado")
+            prev = ch.status or "Aberto"
+            ch.status = novo
         if prev == "Aberto" and novo != "Aberto" and ch.data_primeira_resposta is None:
             ch.data_primeira_resposta = now_brazil_naive()
         if novo == "Concluído":
@@ -596,13 +597,35 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session 
             from ti.services.cache_manager_incremental import ChamadosTodayCounter
             ChamadosTodayCounter.decrement(db, 1)
 
-        # Sincroniza automaticamente com tabela de SLA
-        _sincronizar_sla(db, ch, status_anterior=prev)
+        try:
+            # Sincroniza automaticamente com tabela de SLA
+            _sincronizar_sla(db, ch, status_anterior=prev)
+        except Exception as e:
+            print(f"[SYNC SLA ERROR] {e}")
+            db.rollback()
 
         try:
             Notification.__table__.create(bind=engine, checkfirst=True)
             HistoricoTicket.__table__.create(bind=engine, checkfirst=True)
             HistoricoStatus.__table__.create(bind=engine, checkfirst=True)
+
+            # FECHAR HISTÓRICO ANTERIOR: Se o último status não tem data_fim, preencher
+            agora = now_brazil_naive()
+            try:
+                ultimo_historico = db.query(HistoricoStatus).filter(
+                    HistoricoStatus.chamado_id == ch.id
+                ).order_by(HistoricoStatus.data_inicio.desc()).first()
+
+                if ultimo_historico and not ultimo_historico.data_fim:
+                    ultimo_historico.data_fim = agora
+                    db.add(ultimo_historico)
+                    db.commit()
+            except Exception as e:
+                print(f"[HISTORICO - Fechar anterior ERROR] {e}")
+                import traceback
+                traceback.print_exc()
+                db.rollback()
+
             dados = json.dumps({
                 "id": ch.id,
                 "codigo": ch.codigo,
@@ -613,7 +636,7 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session 
             n = Notification(
                 tipo="chamado",
                 titulo=f"Status atualizado: {ch.codigo}",
-                mensagem=f"{prev} → {ch.status}",
+                mensagem=f"{prev} �� {ch.status}",
                 recurso="chamado",
                 recurso_id=ch.id,
                 acao="status",
@@ -621,15 +644,25 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session 
             )
             db.add(n)
             # registrar em historico_status (única fonte de verdade)
-            hs = HistoricoStatus(
-                chamado_id=ch.id,
-                usuario_id=None,
-                status_anterior=prev,
-                status_novo=ch.status,
-                criado_em=now_brazil_naive(),
-            )
-            db.add(hs)
-            db.commit()
+            try:
+                hs = HistoricoStatus(
+                    chamado_id=ch.id,
+                    usuario_id=None,
+                    status=ch.status,
+                    data_inicio=agora,
+                    descricao=f"Migrado: {prev} → {ch.status}",
+                    created_at=agora,
+                    updated_at=agora,
+                )
+                print(f"[HISTORICO STATUS] Criando novo: chamado_id={ch.id}, status={ch.status}, data_inicio={agora}")
+                db.add(hs)
+                db.commit()
+                print(f"[HISTORICO STATUS] Sucesso ao salvar registro")
+            except Exception as e:
+                print(f"[HISTORICO STATUS - Novo registro ERROR] {e}")
+                import traceback
+                traceback.print_exc()
+                db.rollback()
             db.refresh(n)
 
             import anyio
