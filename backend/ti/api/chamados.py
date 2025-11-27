@@ -575,6 +575,20 @@ def obter_historico(chamado_id: int, db: Session = Depends(get_db)):
 @router.patch("/{chamado_id}/status", response_model=ChamadoOut)
 def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session = Depends(get_db)):
     try:
+        # Ensure all related tables exist
+        try:
+            HistoricoAnexo.__table__.create(bind=engine, checkfirst=True)
+        except Exception:
+            pass
+        try:
+            HistoricoStatus.__table__.create(bind=engine, checkfirst=True)
+        except Exception:
+            pass
+        try:
+            HistoricoTicket.__table__.create(bind=engine, checkfirst=True)
+        except Exception:
+            pass
+
         novo = _normalize_status(payload.status)
         if novo not in ALLOWED_STATUSES:
             raise HTTPException(status_code=400, detail="Status inválido")
