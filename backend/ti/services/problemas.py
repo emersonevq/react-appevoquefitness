@@ -69,6 +69,7 @@ def criar_problema(db: Session, payload: ProblemaCreate) -> Problema:
             nome=nome,
             prioridade=prioridade,
             requer_internet=payload.requer_internet,
+            tempo_resolucao_horas=payload.tempo_resolucao_horas,
         )
         db.add(novo)
         db.commit()
