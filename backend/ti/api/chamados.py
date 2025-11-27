@@ -483,6 +483,10 @@ def baixar_anexo_ticket(anexo_id: int, db: Session = Depends(get_db)):
 @router.get("/{chamado_id}/historico", response_model=HistoricoResponse)
 def obter_historico(chamado_id: int, db: Session = Depends(get_db)):
     try:
+        try:
+            HistoricoAnexo.__table__.create(bind=engine, checkfirst=True)
+        except Exception:
+            pass
         items: list[HistoricoItem] = []
         ch = db.query(Chamado).filter(Chamado.id == chamado_id).first()
         if not ch:
