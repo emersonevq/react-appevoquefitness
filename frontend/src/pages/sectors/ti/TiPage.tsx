@@ -514,6 +514,27 @@ function TicketForm(props: {
         </div>
       </div>
 
+      {selectedProblem && (
+        <div className="grid gap-2 p-3 rounded-lg bg-secondary/40 border border-secondary">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Prioridade:</span>
+              <span className={`font-semibold text-sm ${getPrioridadeColor(selectedProblem.prioridade)}`}>
+                {selectedProblem.prioridade}
+              </span>
+            </div>
+            {selectedProblem.tempo_resolucao_horas && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Prazo máximo:</span>
+                <span className="font-semibold text-sm">
+                  {formatTempo(selectedProblem.tempo_resolucao_horas)}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {selectedProblem?.requer_internet && (
         <div className="grid gap-2">
           <Label>Selecione o item de Internet</Label>
