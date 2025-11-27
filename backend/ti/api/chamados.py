@@ -712,6 +712,7 @@ def deletar_chamado(chamado_id: int, payload: ChamadoDeleteRequest = Body(...), 
         db.query(ChamadoAnexo).filter(ChamadoAnexo.chamado_id == chamado_id).delete()
         db.query(HistoricoStatus).filter(HistoricoStatus.chamado_id == chamado_id).delete()
         db.query(HistoricoTicket).filter(HistoricoTicket.chamado_id == chamado_id).delete()
+        db.query(ChamadoTimeline).filter(ChamadoTimeline.chamado_id == chamado_id).delete()
         db.query(TicketAnexo).filter(TicketAnexo.chamado_id == chamado_id).delete()
         db.commit()
 
