@@ -17,6 +17,7 @@ Corrigir completamente o sistema de SLA que estava:
 **Arquivo:** `backend/ti/services/sla_cache.py`
 
 Novo `SLACacheManager` com:
+
 - **Cache em 2 camadas**: Memória (rápido) + Banco de Dados (persistente)
 - **TTL Inteligente**: 15 minutos para métricas pesadas, 5 minutos para métricas leves
 - **Limpeza Automática**: Método `clear_expired()` remove cache expirado
@@ -27,6 +28,7 @@ Novo `SLACacheManager` com:
 **Arquivo:** `backend/ti/api/chamados.py`
 
 Quando um chamado é criado/alterado:
+
 1. Sincroniza com tabela de histórico de SLA
 2. **Invalida automaticamente** caches relacionados
 3. Frontend é notificado via React Query
@@ -36,6 +38,7 @@ Quando um chamado é criado/alterado:
 **Arquivo:** `backend/ti/api/sla.py`
 
 Novo endpoint que:
+
 - Calcula TODAS as métricas pesadas antecipadamente
 - Executa em paralelo (~2 segundos)
 - Reduz primeira requisição de 10s → 100ms
@@ -59,6 +62,7 @@ Novo endpoint que:
 **Arquivo:** `backend/ti/services/sla_validator.py`
 
 Novo `SLAValidator` que verifica:
+
 - Tempos dentro de limites razoáveis
 - Tempo de resolução ≥ tempo de resposta
 - Datas de chamados em sequência lógica
@@ -196,16 +200,19 @@ curl http://seu-site.com/api/sla/validate/all
 ## 🐛 Troubleshooting
 
 ### Dashboard muito lento
+
 1. `POST /sla/cache/cleanup`
 2. `POST /sla/cache/warmup`
 3. Aumentar TTL em `CACHE_TTL` se cache expira muito rápido
 
 ### Cálculos de SLA errados
+
 1. `GET /sla/validate/all`
 2. `GET /sla/validate/chamado/123`
 3. Verificar datas do chamado
 
 ### Cache não persiste
+
 1. Verificar que tabela `metrics_cache_db` existe
 2. Verificar permissões de escrita no BD
 3. Verificar logs para exceções

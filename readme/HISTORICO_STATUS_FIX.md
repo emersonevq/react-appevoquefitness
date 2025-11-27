@@ -63,6 +63,7 @@ python backend/main.py
 ```
 
 A migração executará automaticamente e você verá uma mensagem como:
+
 ```
 ✅ Migração historico_status executada com sucesso
 ```
@@ -118,6 +119,7 @@ Se sua tabela teve a estrutura migrada, os dados antigos foram preservados:
 ```
 
 Os dados foram convertidos automaticamente:
+
 - `status_novo` → `status`
 - `data_mudanca` → `data_inicio`
 - `status_anterior + '→' + status_novo + motivo` → `descricao`

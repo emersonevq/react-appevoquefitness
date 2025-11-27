@@ -9,16 +9,19 @@ Um sistema completo de SLA (Service Level Agreement) foi implementado no painel 
 ### 1. Modelos de Banco de Dados (Backend)
 
 #### `SLAConfiguration`
+
 - **Arquivo**: `backend/ti/models/sla_config.py`
 - **Tabela**: `sla_configuration`
 - Campos: prioridade, tempo_resposta_horas, tempo_resolucao_horas, descricao, ativo
 
 #### `SLABusinessHours`
+
 - **Arquivo**: `backend/ti/models/sla_config.py`
 - **Tabela**: `sla_business_hours`
 - Padrão Padrão: Segunda a sexta, 08:00 às 18:00
 
 #### `HistoricoSLA`
+
 - **Arquivo**: `backend/ti/models/sla_config.py`
 - **Tabela**: `historico_sla`
 - Rastreia todas as alterações de SLA para auditorias
@@ -26,6 +29,7 @@ Um sistema completo de SLA (Service Level Agreement) foi implementado no painel 
 ### 2. Serviço de Cálculo de SLA (Backend)
 
 #### `SLACalculator`
+
 - **Arquivo**: `backend/ti/services/sla.py`
 - Métodos principais:
   - `calculate_business_hours()`: Calcula horas de negócio
@@ -35,23 +39,27 @@ Um sistema completo de SLA (Service Level Agreement) foi implementado no painel 
 ### 3. API REST (Backend)
 
 #### Endpoints de Configuração
+
 - `GET /api/sla/config`: Lista configurações
 - `POST /api/sla/config`: Cria nova configuração
 - `PATCH /api/sla/config/{id}`: Atualiza
 - `DELETE /api/sla/config/{id}`: Remove
 
 #### Endpoints de Status
+
 - `GET /api/sla/chamado/{id}/status`: Status de um chamado
 - `GET /api/sla/historico/{id}`: Histórico de SLA
 
 ### 4. Interface Frontend
 
 #### Página de Configurações de SLA
+
 - **Arquivo**: `frontend/src/pages/sectors/ti/admin/configuracoes/SLAConfig.tsx`
 - Criar, editar e deletar níveis de SLA
 - Configurar horários comerciais
 
 #### Hook de Integração
+
 - **Arquivo**: `frontend/src/hooks/useSLAStatus.ts`
 - Busca status de SLA do chamado
 - Atualiza a cada 30 segundos
@@ -59,18 +67,22 @@ Um sistema completo de SLA (Service Level Agreement) foi implementado no painel 
 ## Fluxo de Cálculo de SLA
 
 ### 1. Abertura de Chamado
+
 - Data de abertura é registrada
 - Status inicia como "Aberto"
 
 ### 2. Primeira Resposta
+
 - `data_primeira_resposta` é calculada
 - SLA de resposta é avaliado
 
 ### 3. Durante o Atendimento
+
 - Status muda entre "Em andamento", "Em análise"
 - Cada mudança gera registro em `HistoricoSLA`
 
 ### 4. Conclusão
+
 - SLA de resolução final é calculado
 - Histórico é registrado
 
@@ -89,6 +101,7 @@ Fora do horário: Não conta
 O sistema foi integrado com os endpoints de chamados:
 
 ### Ao atualizar status de chamado:
+
 1. `PATCH /api/chamados/{id}/status` é chamado
 2. Status é atualizado no banco
 3. SLA é calculado
