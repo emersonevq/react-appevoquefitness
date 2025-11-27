@@ -34,13 +34,14 @@ def criar_problema(db: Session, payload: ProblemaCreate) -> Problema:
     try:
         res = db.execute(
             text(
-                "INSERT INTO problema_reportado (nome, prioridade_padrao, requer_item_internet, ativo) "
-                "VALUES (:nome, :prioridade, :requer, 1)"
+                "INSERT INTO problema_reportado (nome, prioridade_padrao, requer_item_internet, ativo, tempo_resolucao_horas) "
+                "VALUES (:nome, :prioridade, :requer, 1, :tempo)"
             ),
             {
                 "nome": payload.nome,
                 "prioridade": payload.prioridade,
                 "requer": 1 if payload.requer_internet else 0,
+                "tempo": payload.tempo_resolucao_horas,
             },
         )
         db.commit()
@@ -60,6 +61,7 @@ def criar_problema(db: Session, payload: ProblemaCreate) -> Problema:
             nome=nome,
             prioridade=prioridade,
             requer_internet=payload.requer_internet,
+            tempo_resolucao_horas=payload.tempo_resolucao_horas,
         )
     except Exception:
         # Fallback to ORM table
@@ -67,6 +69,7 @@ def criar_problema(db: Session, payload: ProblemaCreate) -> Problema:
             nome=nome,
             prioridade=prioridade,
             requer_internet=payload.requer_internet,
+            tempo_resolucao_horas=payload.tempo_resolucao_horas,
         )
         db.add(novo)
         db.commit()

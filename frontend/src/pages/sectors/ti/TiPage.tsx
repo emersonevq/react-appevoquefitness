@@ -419,6 +419,23 @@ function TicketForm(props: {
     [listaProblemas, form.problema],
   );
 
+  const formatTempo = (horas: number | null) => {
+    if (!horas) return null;
+    if (horas < 24) return `${horas}h`;
+    const dias = horas / 24;
+    return dias % 1 === 0 ? `${dias}d` : `${horas}h`;
+  };
+
+  const getPrioridadeColor = (prioridade: string) => {
+    const colors: Record<string, string> = {
+      Crítica: "text-red-600 dark:text-red-400",
+      Alta: "text-orange-600 dark:text-orange-400",
+      Normal: "text-blue-600 dark:text-blue-400",
+      Baixa: "text-green-600 dark:text-green-400",
+    };
+    return colors[prioridade] || colors.Normal;
+  };
+
   return (
     <form onSubmit={submit} className="grid gap-4">
       <div className="grid gap-2">
@@ -513,6 +530,29 @@ function TicketForm(props: {
           </Select>
         </div>
       </div>
+
+      {selectedProblem && (
+        <div className="grid gap-2 p-3 rounded-lg bg-secondary/40 border border-secondary">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Prioridade:</span>
+              <span
+                className={`font-semibold text-sm ${getPrioridadeColor(selectedProblem.prioridade)}`}
+              >
+                {selectedProblem.prioridade}
+              </span>
+            </div>
+            {selectedProblem.tempo_resolucao_horas && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Prazo máximo:</span>
+                <span className="font-semibold text-sm">
+                  {formatTempo(selectedProblem.tempo_resolucao_horas)}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {selectedProblem?.requer_internet && (
         <div className="grid gap-2">

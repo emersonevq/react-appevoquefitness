@@ -21,6 +21,7 @@ import {
 import { useState, useEffect } from "react";
 import { useAuthContext } from "@/lib/auth-context";
 import { TIDashboard } from "@/components/ti-dashboard/TIDashboard";
+import { apiFetch } from "@/lib/api";
 
 interface Ticket {
   id: string;
@@ -29,6 +30,14 @@ interface Ticket {
   data: string;
   problema: string;
   status: string;
+}
+
+interface Problema {
+  id: number;
+  nome: string;
+  prioridade: string;
+  requer_internet: boolean;
+  tempo_resolucao_horas: number | null;
 }
 
 export default function SectorPage() {
@@ -316,6 +325,50 @@ function TicketForm({
     visita: "",
   });
 
+  const [problemas, setProblemas] = useState<Problema[]>([]);
+  const [problemaSelecionado, setProblemaSelecionado] =
+    useState<Problema | null>(null);
+  const [loadingProblemas, setLoadingProblemas] = useState(true);
+
+  useEffect(() => {
+    const carregarProblemas = async () => {
+      try {
+        const data = await apiFetch("/problemas");
+        setProblemas(data || []);
+      } catch (error) {
+        console.error("Erro ao carregar problemas:", error);
+        setProblemas([]);
+      } finally {
+        setLoadingProblemas(false);
+      }
+    };
+
+    carregarProblemas();
+  }, []);
+
+  const handleProblemaChange = (problemaId: string) => {
+    const problema = problemas.find((p) => p.nome === problemaId);
+    setForm({ ...form, problema: problemaId });
+    setProblemaSelecionado(problema || null);
+  };
+
+  const formatTempo = (horas: number | null) => {
+    if (!horas) return null;
+    if (horas < 24) return `${horas}h`;
+    const dias = horas / 24;
+    return dias % 1 === 0 ? `${dias}d` : `${horas}h`;
+  };
+
+  const getPrioridadeColor = (prioridade: string) => {
+    const colors: Record<string, string> = {
+      Crítica: "text-red-600 dark:text-red-400",
+      Alta: "text-orange-600 dark:text-orange-400",
+      Normal: "text-blue-600 dark:text-blue-400",
+      Baixa: "text-green-600 dark:text-green-400",
+    };
+    return colors[prioridade] || colors.Normal;
+  };
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit(form);
@@ -410,20 +463,46 @@ function TicketForm({
           <Label>Problema Reportado</Label>
           <Select
             value={form.problema}
-            onValueChange={(v) => setForm({ ...form, problema: v })}
+            onValueChange={handleProblemaChange}
+            disabled={loadingProblemas}
           >
             <SelectTrigger>
-              <SelectValue placeholder="Selecione" />
+              <SelectValue
+                placeholder={loadingProblemas ? "Carregando..." : "Selecione"}
+              />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="Hardware">Hardware</SelectItem>
-              <SelectItem value="Software">Software</SelectItem>
-              <SelectItem value="Rede">Rede</SelectItem>
-              <SelectItem value="Acesso">Acesso</SelectItem>
-              <SelectItem value="Outro">Outro</SelectItem>
+              {problemas.map((p) => (
+                <SelectItem key={p.id} value={p.nome}>
+                  {p.nome}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
+
+        {problemaSelecionado && (
+          <div className="grid gap-2 mt-2 p-3 rounded-lg bg-secondary/40 border border-secondary">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">Prioridade:</span>
+                <span
+                  className={`font-semibold text-sm ${getPrioridadeColor(problemaSelecionado.prioridade)}`}
+                >
+                  {problemaSelecionado.prioridade}
+                </span>
+              </div>
+              {problemaSelecionado.tempo_resolucao_horas && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">Prazo máximo:</span>
+                  <span className="font-semibold text-sm">
+                    {formatTempo(problemaSelecionado.tempo_resolucao_horas)}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-2">
