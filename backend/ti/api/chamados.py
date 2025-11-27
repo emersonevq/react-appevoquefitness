@@ -643,6 +643,8 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session 
                 status=ch.status,
                 data_inicio=agora,
                 descricao=f"Migrado: {prev} → {ch.status}",
+                created_at=agora,
+                updated_at=agora,
             )
             db.add(hs)
             db.commit()
