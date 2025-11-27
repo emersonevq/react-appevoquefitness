@@ -30,6 +30,7 @@ except Exception as e:
 try:
     from ti.scripts.migrate_historico_status import migrate_historico_status
     migrate_historico_status()
+    print("✅ Migração historico_status executada com sucesso")
 except Exception as e:
     print(f"⚠️  Erro ao migrar historico_status: {e}")
 
