@@ -48,8 +48,10 @@ export function PrioridadesProblemas() {
   const carregarProblemas = async () => {
     try {
       setLoading(true);
-      const data = await apiFetch("/problemas");
-      setProblemas(data || []);
+      const response = await apiFetch("/problemas");
+      if (!response.ok) throw new Error("Falha ao carregar problemas");
+      const data = await response.json();
+      setProblemas(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Erro ao carregar problemas:", error);
       toast({
@@ -57,6 +59,7 @@ export function PrioridadesProblemas() {
         description: "Não foi possível carregar os problemas",
         variant: "destructive",
       });
+      setProblemas([]);
     } finally {
       setLoading(false);
     }
