@@ -596,8 +596,12 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session 
             from ti.services.cache_manager_incremental import ChamadosTodayCounter
             ChamadosTodayCounter.decrement(db, 1)
 
-        # Sincroniza automaticamente com tabela de SLA
-        _sincronizar_sla(db, ch, status_anterior=prev)
+        try:
+            # Sincroniza automaticamente com tabela de SLA
+            _sincronizar_sla(db, ch, status_anterior=prev)
+        except Exception as e:
+            print(f"[SYNC SLA ERROR] {e}")
+            db.rollback()
 
         try:
             Notification.__table__.create(bind=engine, checkfirst=True)
