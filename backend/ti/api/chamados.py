@@ -492,6 +492,8 @@ def baixar_anexo_ticket(anexo_id: int, db: Session = Depends(get_db)):
     mime = res[3] or "application/octet-stream"
     headers = {"Content-Disposition": f"inline; filename={nome}"}
     return Response(content=res[4], media_type=mime, headers=headers)
+    
+    
 
 @router.get("/{chamado_id}/historico", response_model=HistoricoResponse)
 def obter_historico(chamado_id: int, db: Session = Depends(get_db)):
@@ -596,15 +598,14 @@ def obter_historico(chamado_id: int, db: Session = Depends(get_db)):
 @router.patch("/{chamado_id}/status", response_model=ChamadoOut)
 def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session = Depends(get_db)):
     try:
-        try:
-            novo = _normalize_status(payload.status)
-            if novo not in ALLOWED_STATUSES:
-                raise HTTPException(status_code=400, detail="Status inválido")
-            ch = db.query(Chamado).filter(Chamado.id == chamado_id).first()
-            if not ch:
-                raise HTTPException(status_code=404, detail="Chamado não encontrado")
-            prev = ch.status or "Aberto"
-            ch.status = novo
+        novo = _normalize_status(payload.status)
+        if novo not in ALLOWED_STATUSES:
+            raise HTTPException(status_code=400, detail="Status inválido")
+        ch = db.query(Chamado).filter(Chamado.id == chamado_id).first()
+        if not ch:
+            raise HTTPException(status_code=404, detail="Chamado não encontrado")
+        prev = ch.status or "Aberto"
+        ch.status = novo
         if prev == "Aberto" and novo != "Aberto" and ch.data_primeira_resposta is None:
             ch.data_primeira_resposta = now_brazil_naive()
         if novo == "Concluído":
