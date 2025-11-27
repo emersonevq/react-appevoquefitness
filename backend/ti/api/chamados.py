@@ -754,46 +754,106 @@ def deletar_chamado(chamado_id: int, payload: ChamadoDeleteRequest = Body(...), 
         if not _chk(user.senha_hash, payload.senha):
             raise HTTPException(status_code=401, detail="Senha inválida")
 
-        # Buscar o chamado
-        ch = db.query(Chamado).filter(Chamado.id == chamado_id).first()
+        # Buscar o chamado SEM carregar relações automaticamente (evita erro de tabelas inexistentes)
+        ch = db.execute(
+            text("SELECT * FROM chamado WHERE id = :id"),
+            {"id": chamado_id}
+        ).fetchone()
+
         if not ch:
             raise HTTPException(status_code=404, detail="Chamado não encontrado")
 
-        print(f"[SOFT DELETE] Iniciando soft delete do chamado {chamado_id}")
+        print(f"[DELETE] Iniciando exclusão do chamado {chamado_id}")
 
         # Guardar informações do chamado para uso posterior
+        # Acessar por índice já que ch é um Row object do SQLAlchemy
         chamado_info = {
-            'id': ch.id,
-            'codigo': ch.codigo,
-            'protocolo': ch.protocolo,
-            'status': ch.status or 'Aberto',
+            'id': ch[0],  # id
+            'codigo': ch[1] if len(ch) > 1 else f"CH{chamado_id}",  # codigo
+            'protocolo': ch[2] if len(ch) > 2 else f"PROT{chamado_id}",  # protocolo
+            'status': ch[14] if len(ch) > 14 else 'Aberto',  # status
         }
 
-        # Realizar soft delete: marcar como deletado
-        ch.is_deleted = True
-        ch.data_delecao = now_brazil_naive()
-        db.add(ch)
-        db.commit()
-        db.refresh(ch)
+        # Lista COMPLETA de tabelas relacionadas na ordem correta
+        tabelas_relacionadas = [
+            "chamado_timeline",      # Timeline de eventos do chamado
+            "chamado_anexo",         # Anexos enviados na abertura
+            "ticket_anexos",         # Anexos de tickets/histórico
+            "historico_status",      # Histórico de mudanças de status
+            "historicos_tickets",    # Histórico de tickets enviados
+            "historico_sla",         # Histórico de SLA do chamado
+        ]
 
-        print(f"[SOFT DELETE] Chamado {chamado_id} marcado como deletado")
+        # Deletar registros relacionados de cada tabela
+        total_deletados = 0
+        for tabela in tabelas_relacionadas:
+            if _table_exists(tabela):
+                try:
+                    result = db.execute(
+                        text(f"DELETE FROM {tabela} WHERE chamado_id = :id"),
+                        {"id": chamado_id}
+                    )
+                    deleted_count = result.rowcount
+                    total_deletados += deleted_count
+                    print(f"[DELETE] Deletados {deleted_count} registros de {tabela}")
+                    db.commit()  # Commit após cada tabela para evitar locks
+                except Exception as e:
+                    print(f"[DELETE] Erro ao deletar de {tabela}: {e}")
+                    db.rollback()
+                    # Continua tentando deletar das outras tabelas
+            else:
+                print(f"[DELETE] Tabela {tabela} não existe, pulando...")
+
+        # Deletar notificações relacionadas ao chamado
+        if _table_exists("notification"):
+            try:
+                result = db.execute(
+                    text("DELETE FROM notification WHERE recurso = 'chamado' AND recurso_id = :id"),
+                    {"id": chamado_id}
+                )
+                deleted_count = result.rowcount
+                total_deletados += deleted_count
+                print(f"[DELETE] Deletadas {deleted_count} notificações")
+                db.commit()
+            except Exception as e:
+                print(f"[DELETE] Erro ao deletar notifications: {e}")
+                db.rollback()
+
+        # Deletar o chamado principal usando SQL direto para evitar problemas com relações
+        try:
+            result = db.execute(
+                text("DELETE FROM chamado WHERE id = :id"),
+                {"id": chamado_id}
+            )
+            if result.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Chamado não encontrado na tabela principal")
+
+            db.commit()
+            print(f"[DELETE] Chamado {chamado_id} deletado com sucesso")
+            print(f"[DELETE] Total de registros deletados: {total_deletados + 1}")
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"[DELETE] Erro ao deletar chamado principal: {e}")
+            db.rollback()
+            raise HTTPException(status_code=500, detail=f"Erro ao deletar chamado: {e}")
 
         # Decrementar contador se o chamado não estava cancelado
         if chamado_info['status'] != "Cancelado":
             try:
                 from ti.services.cache_manager_incremental import ChamadosTodayCounter
                 ChamadosTodayCounter.decrement(db, 1)
-                print(f"[SOFT DELETE] Contador decrementado")
+                print(f"[DELETE] Contador decrementado")
             except Exception as e:
-                print(f"[SOFT DELETE] Erro ao decrementar contador: {e}")
+                print(f"[DELETE] Erro ao decrementar contador: {e}")
 
         # Invalidar cache de SLA relacionado ao chamado
         try:
             from ti.services.sla_cache import SLACacheManager
             SLACacheManager.invalidate_by_chamado(db, chamado_id)
-            print(f"[SOFT DELETE] Cache de SLA invalidado")
+            print(f"[DELETE] Cache de SLA invalidado")
         except Exception as e:
-            print(f"[SOFT DELETE] Erro ao invalidar cache: {e}")
+            print(f"[DELETE] Erro ao invalidar cache: {e}")
 
         # Criar notificação de exclusão
         try:
@@ -802,12 +862,13 @@ def deletar_chamado(chamado_id: int, payload: ChamadoDeleteRequest = Body(...), 
                 "id": chamado_info['id'],
                 "codigo": chamado_info['codigo'],
                 "protocolo": chamado_info['protocolo'],
+                "registros_deletados": total_deletados + 1,
             }, ensure_ascii=False)
 
             n = Notification(
                 tipo="chamado",
-                titulo=f"Chamado removido: {chamado_info['codigo']}",
-                mensagem=f"Chamado {chamado_info['protocolo']} foi removido da visualização",
+                titulo=f"Chamado excluído: {chamado_info['codigo']}",
+                mensagem=f"Chamado {chamado_info['protocolo']} foi removido do sistema ({total_deletados + 1} registros deletados)",
                 recurso="chamado",
                 recurso_id=chamado_id,
                 acao="excluido",
@@ -845,13 +906,15 @@ def deletar_chamado(chamado_id: int, payload: ChamadoDeleteRequest = Body(...), 
                 "timestamp": now_brazil_naive().isoformat(),
             })
 
-            print(f"[SOFT DELETE] Notificação e eventos WebSocket emitidos")
+            print(f"[DELETE] Notificação e eventos WebSocket emitidos")
         except Exception as e:
-            print(f"[SOFT DELETE] Erro ao criar notificação/WebSocket: {e}")
+            print(f"[DELETE] Erro ao criar notificação/WebSocket: {e}")
+            # Não falhar a operação por causa disso
 
         return {
             "ok": True,
-            "message": f"Chamado {chamado_info['codigo']} removido com sucesso",
+            "message": f"Chamado {chamado_info['codigo']} excluído com sucesso",
+            "registros_deletados": total_deletados + 1,
             "detalhes": {
                 "chamado_id": chamado_id,
                 "codigo": chamado_info['codigo'],
@@ -863,7 +926,7 @@ def deletar_chamado(chamado_id: int, payload: ChamadoDeleteRequest = Body(...), 
         raise
     except Exception as e:
         import traceback
-        print(f"[SOFT DELETE] ERRO GERAL: {e}")
-        print(f"[SOFT DELETE] TRACEBACK: {traceback.format_exc()}")
+        print(f"[DELETE] ERRO GERAL: {e}")
+        print(f"[DELETE] TRACEBACK: {traceback.format_exc()}")
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Erro ao excluir chamado: {e}")
