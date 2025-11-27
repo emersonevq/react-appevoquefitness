@@ -207,6 +207,24 @@ export function SLA() {
     },
   });
 
+  const sincronizarProblemasMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post("/problemas/sincronizar/sla");
+      return response.data;
+    },
+    onSuccess: (data: any) => {
+      const stats = data.estatisticas || {};
+      toast.success(
+        `${stats.sincronizados || 0} problema(s) sincronizado(s) com SLA`,
+      );
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.detail || "Erro ao sincronizar problemas",
+      );
+    },
+  });
+
   const handleAddConfig = () => {
     setEditingConfig(null);
     setFormData({
