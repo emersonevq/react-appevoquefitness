@@ -699,7 +699,10 @@ def atualizar_status(chamado_id: int, payload: ChamadoStatusUpdate, db: Session 
             send_async(send_chamado_status, ch, prev)
         except Exception:
             pass
-        return ch
+        # Convert ORM object to Pydantic model before session closes
+        # This ensures all attributes are loaded while session is still open
+        result = ChamadoOut.model_validate(ch)
+        return result
     except HTTPException:
         raise
     except Exception as e:
