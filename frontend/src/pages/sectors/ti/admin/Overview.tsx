@@ -310,6 +310,19 @@ export default function Overview() {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Visão Geral</h1>
+        <Button
+          onClick={() => atualizarMetricasMutation.mutate()}
+          disabled={atualizarMetricasMutation.isPending}
+          size="sm"
+          className="gap-2"
+        >
+          <RefreshCw className={`w-4 h-4 ${atualizarMetricasMutation.isPending ? 'animate-spin' : ''}`} />
+          {atualizarMetricasMutation.isPending ? 'Atualizando...' : 'Atualizar Métricas'}
+        </Button>
+      </div>
+
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Metric
