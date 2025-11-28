@@ -16,6 +16,7 @@ class SLAConfiguration(Base):
     ativo: Mapped[bool] = mapped_column(Boolean, default=True)
     criado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     atualizado_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    ultimo_reset_em: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class SLABusinessHours(Base):
