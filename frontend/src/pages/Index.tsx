@@ -13,7 +13,6 @@ import { useAuthContext } from "@/lib/auth-context";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/api";
-import { AlertsDisplay } from "@/components/alerts/AlertsDisplay";
 
 export default function Index() {
   const { user } = useAuthContext();
