@@ -67,6 +67,7 @@ export default function AlertsConfig() {
   const [message, setMessage] = useState("");
   const [description, setDescription] = useState("");
   const [severity, setSeverity] = useState<keyof typeof severityConfig>("low");
+  const [selectedPages, setSelectedPages] = useState<string[]>([]);
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
