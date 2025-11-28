@@ -552,7 +552,7 @@ export function SLA() {
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h2 className="text-lg font-semibold">Níveis de SLA e Prioridades</h2>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <div className="flex gap-1 bg-muted rounded-lg p-1">
               <Button
                 type="button"
@@ -584,6 +584,16 @@ export function SLA() {
             >
               <RefreshCw className="w-4 h-4" />
               Sincronizar
+            </Button>
+            <Button
+              onClick={() => zerarCacheMutation.mutate()}
+              disabled={zerarCacheMutation.isPending}
+              variant="destructive"
+              size="sm"
+              className="gap-2 h-8"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Zerar SLA
             </Button>
             <Dialog open={showConfigDialog} onOpenChange={setShowConfigDialog}>
               <DialogTrigger asChild>
