@@ -174,6 +174,16 @@ export default function Overview() {
       gcTime: 60 * 60 * 1000,
     });
 
+  const { data: p90AnalysisData, isLoading: p90Loading } = useQuery({
+    queryKey: ["sla-p90-analysis"],
+    queryFn: async () => {
+      const response = await api.get("/sla/recommendations/p90-analysis");
+      return response.data;
+    },
+    staleTime: 30 * 60 * 1000,
+    gcTime: 120 * 60 * 1000,
+  });
+
   // Atualiza estado local quando dados do React Query chegam
   useEffect(() => {
     if (basicMetricsData) {
@@ -264,7 +274,8 @@ export default function Overview() {
       dailyLoading ||
       weeklyLoading ||
       slaLoading ||
-      performanceLoading;
+      performanceLoading ||
+      p90Loading;
     setIsLoading(allLoading);
   }, [
     basicLoading,
@@ -272,6 +283,7 @@ export default function Overview() {
     weeklyLoading,
     slaLoading,
     performanceLoading,
+    p90Loading,
   ]);
 
   if (isLoading) {
@@ -351,12 +363,12 @@ export default function Overview() {
           icon={Clock}
         />
         <Metric
-          label="SLA (30h)"
-          value={`${metrics?.sla_compliance_24h || 0}%`}
-          sub="Dentro do acordo"
+          label="Conformidade SLA"
+          value={`${slaData.dentro_sla > 0 ? Math.round((slaData.dentro_sla / (slaData.dentro_sla + slaData.fora_sla)) * 100) : 0}%`}
+          sub={`${slaData.dentro_sla} de ${slaData.dentro_sla + slaData.fora_sla} chamados`}
           variant="green"
           icon={CheckCircle2}
-          trend={metrics && metrics.sla_compliance_24h >= 80 ? "up" : "down"}
+          trend={slaData.dentro_sla > slaData.fora_sla ? "up" : "down"}
         />
         <Metric
           label="Chamados ativos"
@@ -455,9 +467,9 @@ export default function Overview() {
         </div>
       </div>
 
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="relative group">
+      {/* Charts Row 2 - SLA Distribution and P90 Analysis */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="relative group lg:col-span-1">
           <div className="absolute -inset-1 bg-gradient-to-r from-primary/10 to-primary/5 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="relative card-surface rounded-2xl p-6 border border-border/60">
             <h3 className="font-semibold text-lg mb-4">Distribuição SLA</h3>
@@ -521,53 +533,78 @@ export default function Overview() {
           </div>
         </div>
 
-        <div className="relative group">
+        <div className="relative group lg:col-span-2">
           <div className="absolute -inset-1 bg-gradient-to-r from-primary/10 to-primary/5 rounded-2xl blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="relative card-surface rounded-2xl p-6 border border-border/60">
-            <h3 className="font-semibold text-lg mb-4">Desempenho do mês</h3>
-            <div className="space-y-4">
-              {!performanceData ? (
+            <h3 className="font-semibold text-lg mb-4">
+              P90 Recomendado vs SLA Atual
+            </h3>
+            <div className="space-y-3">
+              {p90Loading ? (
                 <div className="text-muted-foreground text-center py-4">
-                  Carregando dados de desempenho...
+                  <Loader className="w-4 h-4 animate-spin mx-auto" />
+                </div>
+              ) : !p90AnalysisData?.prioridades ||
+                Object.keys(p90AnalysisData.prioridades).length === 0 ? (
+                <div className="text-muted-foreground text-center py-4 text-sm">
+                  Dados insuficientes para análise
                 </div>
               ) : (
-                [
-                  {
-                    label: "Tempo médio de resolução",
-                    value: performanceData.tempo_resolucao_medio,
-                    color: "orange",
-                  },
-                  {
-                    label: "Primeira resposta",
-                    value: performanceData.primeira_resposta_media,
-                    color: "blue",
-                  },
-                  {
-                    label: "Taxa de reaberturas",
-                    value: performanceData.taxa_reaberturas,
-                    color: "green",
-                  },
-                  {
-                    label: "Chamados em backlog",
-                    value: String(performanceData.chamados_backlog),
-                    color: "purple",
-                  },
-                ].map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-1.5 h-8 rounded-full ${colorStyles[item.color as keyof typeof colorStyles]}`}
-                      />
-                      <span className="text-sm text-muted-foreground">
-                        {item.label}
-                      </span>
+                Object.entries(p90AnalysisData.prioridades).map(
+                  ([prioridade, data]: [string, any]) => (
+                    <div
+                      key={prioridade}
+                      className="p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold">
+                          {prioridade}
+                        </span>
+                        <span
+                          className={`text-xs font-bold px-2 py-1 rounded-full ${
+                            data.melhoria > 0
+                              ? "bg-green-500/20 text-green-700 dark:text-green-400"
+                              : "bg-gray-500/20 text-gray-700 dark:text-gray-400"
+                          }`}
+                        >
+                          +{data.melhoria}%
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mb-2">
+                        {data.chamados_analisados} chamados • Min:{" "}
+                        {data.tempo_minimo}h • Médio: {data.tempo_medio}h • Máx:{" "}
+                        {data.tempo_maximo}h
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <div className="text-muted-foreground">SLA Atual</div>
+                          <div className="font-semibold">{data.sla_atual}h</div>
+                          <div className="text-xs text-muted-foreground">
+                            {data.conformidade_atual}% ok
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">P90</div>
+                          <div className="font-semibold">
+                            {data.p90.toFixed(1)}h
+                          </div>
+                          <div className="text-xs text-muted-foreground">-</div>
+                        </div>
+                        <div>
+                          <div className="text-muted-foreground">
+                            Recomendado
+                          </div>
+                          <div className="font-semibold">
+                            {data.p90_recomendado}h
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {data.conformidade_com_p90}% ok
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <span className="text-lg font-bold">{item.value}</span>
-                  </div>
-                ))
+                  ),
+                )
               )}
             </div>
           </div>

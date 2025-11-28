@@ -391,10 +391,10 @@ export function SLA() {
 
   const zerarCacheMutation = useMutation({
     mutationFn: async () => {
-      const response = await api.post("/sla/cache/reset-all");
+      const response = await api.post("/sla/reset-and-recalculate");
       return response.data;
     },
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["sla-config"] });
       queryClient.invalidateQueries({ queryKey: ["metrics-basic"] });
       queryClient.invalidateQueries({ queryKey: ["metrics-sla"] });
@@ -402,13 +402,11 @@ export function SLA() {
       queryClient.invalidateQueries({ queryKey: ["metrics-weekly"] });
       queryClient.invalidateQueries({ queryKey: ["metrics-performance"] });
       toast.success(
-        "Cache de SLA resetado com sucesso! Contagem recomeçará do zero.",
+        "SLA foi completamente zerado! Próximos cálculos começarão a partir de agora.",
       );
     },
     onError: (error: any) => {
-      toast.error(
-        error.response?.data?.detail || "Erro ao resetar cache de SLA",
-      );
+      toast.error(error.response?.data?.detail || "Erro ao zerar SLA");
     },
   });
 

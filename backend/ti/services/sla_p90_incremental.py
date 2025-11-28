@@ -155,8 +155,6 @@ class SLAP90Incremental:
     ) -> bool:
         """Salva dados no cache para uma prioridade."""
         try:
-            from sqlalchemy import insert
-            
             agora = now_brazil_naive()
             ttl_segundos = 30 * 24 * 60 * 60
             expira_em = agora + timedelta(seconds=ttl_segundos)
@@ -165,41 +163,59 @@ class SLAP90Incremental:
             cache_key_resolucao = f"{SLAP90Incremental.CACHE_KEY_TEMPOS_RESOLUCAO}:{prioridade}"
             cache_key_ultimo_id = f"{SLAP90Incremental.CACHE_KEY_ULTIMO_ID}:{prioridade}"
 
-            stmt_resposta = insert(MetricsCacheDB).values(
-                cache_key=cache_key_resposta,
-                cache_value=json.dumps(tempos_resposta),
-                calculated_at=agora,
-                expires_at=expira_em,
-            ).on_duplicate_key_update(
-                cache_value=json.dumps(tempos_resposta),
-                calculated_at=agora,
-                expires_at=expira_em,
-            )
-            db.execute(stmt_resposta)
+            # Resposta
+            cache_resposta = db.query(MetricsCacheDB).filter(
+                MetricsCacheDB.cache_key == cache_key_resposta
+            ).first()
 
-            stmt_resolucao = insert(MetricsCacheDB).values(
-                cache_key=cache_key_resolucao,
-                cache_value=json.dumps(tempos_resolucao),
-                calculated_at=agora,
-                expires_at=expira_em,
-            ).on_duplicate_key_update(
-                cache_value=json.dumps(tempos_resolucao),
-                calculated_at=agora,
-                expires_at=expira_em,
-            )
-            db.execute(stmt_resolucao)
+            if cache_resposta:
+                cache_resposta.cache_value = json.dumps(tempos_resposta)
+                cache_resposta.calculated_at = agora
+                cache_resposta.expires_at = expira_em
+            else:
+                cache_resposta = MetricsCacheDB(
+                    cache_key=cache_key_resposta,
+                    cache_value=json.dumps(tempos_resposta),
+                    calculated_at=agora,
+                    expires_at=expira_em,
+                )
+            db.add(cache_resposta)
 
-            stmt_ultimo_id = insert(MetricsCacheDB).values(
-                cache_key=cache_key_ultimo_id,
-                cache_value=str(ultimo_id),
-                calculated_at=agora,
-                expires_at=expira_em,
-            ).on_duplicate_key_update(
-                cache_value=str(ultimo_id),
-                calculated_at=agora,
-                expires_at=expira_em,
-            )
-            db.execute(stmt_ultimo_id)
+            # Resolução
+            cache_resolucao = db.query(MetricsCacheDB).filter(
+                MetricsCacheDB.cache_key == cache_key_resolucao
+            ).first()
+
+            if cache_resolucao:
+                cache_resolucao.cache_value = json.dumps(tempos_resolucao)
+                cache_resolucao.calculated_at = agora
+                cache_resolucao.expires_at = expira_em
+            else:
+                cache_resolucao = MetricsCacheDB(
+                    cache_key=cache_key_resolucao,
+                    cache_value=json.dumps(tempos_resolucao),
+                    calculated_at=agora,
+                    expires_at=expira_em,
+                )
+            db.add(cache_resolucao)
+
+            # Último ID
+            cache_ultimo_id = db.query(MetricsCacheDB).filter(
+                MetricsCacheDB.cache_key == cache_key_ultimo_id
+            ).first()
+
+            if cache_ultimo_id:
+                cache_ultimo_id.cache_value = str(ultimo_id)
+                cache_ultimo_id.calculated_at = agora
+                cache_ultimo_id.expires_at = expira_em
+            else:
+                cache_ultimo_id = MetricsCacheDB(
+                    cache_key=cache_key_ultimo_id,
+                    cache_value=str(ultimo_id),
+                    calculated_at=agora,
+                    expires_at=expira_em,
+                )
+            db.add(cache_ultimo_id)
 
             db.commit()
             return True
@@ -212,8 +228,9 @@ class SLAP90Incremental:
     def recalcular_incremental(db: Session) -> dict:
         """
         Recalcula SLA de forma INCREMENTAL.
-        
+
         Busca apenas chamados posteriores ao último processado.
+        Ignora chamados anteriores ao último reset (se houver).
         Combina com dados anteriores para calcular P90.
         """
         agora = now_brazil_naive()
@@ -243,8 +260,18 @@ class SLAP90Incremental:
             print(f"  - Total anterior em cache: {cache_anterior['total_anterior']}")
             print(f"  - Último ID processado: {ultimo_id}")
 
+            if config.ultimo_reset_em:
+                print(f"  - Último reset em: {config.ultimo_reset_em.isoformat()}")
+
             tempos_resposta = cache_anterior["tempos_resposta"].copy()
             tempos_resolucao = cache_anterior["tempos_resolucao"].copy()
+
+            # Se houver reset, ignora dados anteriores e começa do zero
+            if config.ultimo_reset_em:
+                print(f"  - Sistema foi resetado! Iniciando cálculos do zero a partir de {config.ultimo_reset_em}")
+                tempos_resposta = []
+                tempos_resolucao = []
+                ultimo_id = 0
 
             chamados_novos = db.query(Chamado).filter(
                 and_(
@@ -253,7 +280,9 @@ class SLAP90Incremental:
                     Chamado.data_abertura <= agora,
                     Chamado.deletado_em.is_(None),
                     Chamado.status.in_(["Concluído", "Cancelado"]),
-                    Chamado.id > ultimo_id
+                    Chamado.id > ultimo_id,
+                    # Se houver reset, apenas chamados APÓS o reset
+                    Chamado.data_abertura >= (config.ultimo_reset_em if config.ultimo_reset_em else data_inicio)
                 )
             ).order_by(Chamado.id.asc()).all()
 

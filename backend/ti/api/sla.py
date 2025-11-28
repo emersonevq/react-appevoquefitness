@@ -625,6 +625,63 @@ def resetar_todo_cache(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Erro ao resetar cache: {e}")
 
 
+@router.post("/reset-and-recalculate")
+def resetar_sla_completo(db: Session = Depends(get_db)):
+    """
+    Reseta COMPLETAMENTE o SLA:
+    1. Limpa todo o cache de métricas (memória + banco)
+    2. Registra a data de reset em cada configuração de SLA
+    3. Remove dados de cache P90 incremental
+    4. Próximos cálculos ignorarão dados anteriores ao reset
+
+    Apenas chamados APÓS este reset serão considerados nos próximos cálculos P90.
+    """
+    try:
+        from ti.models.metrics_cache import MetricsCacheDB
+
+        agora = now_brazil_naive()
+
+        print(f"\n[SLA RESET] Iniciando reset completo do sistema SLA")
+
+        # 1. Invalida TUDO em memória primeiro
+        print(f"[SLA RESET] Invalidando cache em memória...")
+        SLACacheManager.invalidate_all_sla(db)
+
+        # 2. Limpa TUDO do banco de dados
+        print(f"[SLA RESET] Limpando banco de dados...")
+        db.query(MetricsCacheDB).delete()
+
+        # 3. Registra o reset em todas as configurações de SLA
+        print(f"[SLA RESET] Registrando data de reset nas configurações...")
+        configs = db.query(SLAConfiguration).all()
+        for config in configs:
+            config.ultimo_reset_em = agora
+            config.atualizado_em = agora
+            print(f"  - {config.prioridade}: reset em {agora.isoformat()}")
+            db.add(config)
+
+        # 4. Commit de tudo atomicamente
+        db.commit()
+
+        print(f"[SLA RESET] ✅ Reset concluído com sucesso!")
+
+        return {
+            "ok": True,
+            "message": "Sistema de SLA foi completamente resetado",
+            "reset_em": agora.isoformat(),
+            "proximos_calculos": "Apenas chamados posteriores a este reset serão considerados",
+            "configuracoes_atualizadas": len(configs),
+            "cache_limpo": True,
+            "memoria_limpa": True
+        }
+    except Exception as e:
+        print(f"[SLA RESET] ❌ Erro ao resetar SLA: {e}")
+        import traceback
+        traceback.print_exc()
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Erro ao resetar SLA: {e}")
+
+
 @router.post("/recalcular/p90")
 def recalcular_sla_p90(db: Session = Depends(get_db)):
     """
@@ -963,3 +1020,132 @@ def recalcular_sla_agora(db: Session = Depends(get_db)):
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Erro ao recalcular SLA: {e}")
+
+
+@router.get("/recommendations/p90-analysis")
+def analisar_p90_recomendado(db: Session = Depends(get_db)):
+    """
+    Analisa o P90 recomendado para cada prioridade.
+    Mostra quanto a conformidade melhoraria se usar P90 + 15% ao invés do SLA fixo.
+    """
+    try:
+        from datetime import datetime, timedelta
+
+        agora = now_brazil_naive()
+        data_inicio = agora - timedelta(days=30)
+
+        configs = db.query(SLAConfiguration).filter(
+            SLAConfiguration.ativo == True
+        ).order_by(SLAConfiguration.prioridade.asc()).all()
+
+        analise = {
+            "data_analise": agora.isoformat(),
+            "periodo": f"{data_inicio.isoformat()} a {agora.isoformat()}",
+            "prioridades": {}
+        }
+
+        for config in configs:
+            prioridade = config.prioridade
+
+            print(f"\n[P90 ANALYSIS] Analisando prioridade: {prioridade}")
+            print(f"  - SLA configurado: {config.tempo_resolucao_horas}h")
+
+            # Busca APENAS chamados concluídos/cancelados dessa prioridade
+            # Se houve reset, apenas chamados posteriores ao reset
+            query_filters = [
+                Chamado.prioridade == prioridade,
+                Chamado.data_abertura >= data_inicio,
+                Chamado.data_abertura <= agora,
+                Chamado.deletado_em.is_(None),
+                Chamado.status.in_(["Concluído", "Cancelado"]),
+                or_(Chamado.data_conclusao.isnot(None), Chamado.cancelado_em.isnot(None))
+            ]
+
+            # Se houve reset, ignora chamados abertos antes do reset
+            if config.ultimo_reset_em:
+                print(f"  - Filtrando apenas chamados posteriores ao reset ({config.ultimo_reset_em})")
+                query_filters.append(Chamado.data_abertura >= config.ultimo_reset_em)
+
+            chamados = db.query(Chamado).filter(and_(*query_filters)).all()
+
+            print(f"  - Chamados encontrados: {len(chamados)}")
+
+            if len(chamados) < 2:
+                print(f"  - ⚠️ Chamados insuficientes, pulando...")
+                continue
+
+            # Calcula tempos de resolução
+            tempos = []
+            for chamado in chamados:
+                try:
+                    if chamado.data_abertura:
+                        data_fim = chamado.data_conclusao or chamado.cancelado_em
+                        if data_fim:
+                            from ti.services.sla import SLACalculator
+                            tempo = SLACalculator.calculate_business_hours_excluding_paused(
+                                chamado.id,
+                                chamado.data_abertura,
+                                data_fim,
+                                db
+                            )
+                            # Sanidade: 0-720 horas (30 dias)
+                            if 0 < tempo < 720:
+                                tempos.append(tempo)
+                except Exception as e:
+                    print(f"    Erro ao processar chamado {chamado.id}: {e}")
+                    pass
+
+            print(f"  - Tempos válidos: {len(tempos)}")
+
+            if len(tempos) < 2:
+                print(f"  - ⚠️ Tempos insuficientes, pulando...")
+                continue
+
+            # Calcula P90
+            tempos_sorted = sorted(tempos)
+            p90_index = int(0.9 * (len(tempos_sorted) - 1))
+            if p90_index >= len(tempos_sorted):
+                p90_index = len(tempos_sorted) - 1
+
+            p90 = tempos_sorted[p90_index]
+            margem = 1.15
+            p90_com_margem = p90 * margem
+            media = sum(tempos) / len(tempos)
+            minimo = min(tempos)
+            maximo = max(tempos)
+
+            print(f"  - Mínimo: {minimo:.1f}h")
+            print(f"  - Média: {media:.1f}h")
+            print(f"  - P90: {p90:.1f}h")
+            print(f"  - Máximo: {maximo:.1f}h")
+
+            # Calcula conformidade com SLA atual
+            dentro_atual = sum(1 for t in tempos if t <= config.tempo_resolucao_horas)
+            conformidade_atual = int((dentro_atual / len(tempos)) * 100)
+
+            # Calcula conformidade com P90
+            dentro_p90 = sum(1 for t in tempos if t <= p90_com_margem)
+            conformidade_p90 = int((dentro_p90 / len(tempos)) * 100)
+
+            print(f"  - Conformidade SLA atual ({config.tempo_resolucao_horas}h): {conformidade_atual}%")
+            print(f"  - Conformidade P90 ({int(p90_com_margem)}h): {conformidade_p90}%")
+            print(f"  - Melhoria: +{conformidade_p90 - conformidade_atual}%")
+
+            analise["prioridades"][prioridade] = {
+                "sla_atual": int(config.tempo_resolucao_horas),
+                "conformidade_atual": conformidade_atual,
+                "chamados_analisados": len(tempos),
+                "tempo_minimo": round(minimo, 2),
+                "tempo_medio": round(media, 2),
+                "tempo_maximo": round(maximo, 2),
+                "p90": round(p90, 2),
+                "p90_recomendado": int(p90_com_margem),
+                "conformidade_com_p90": conformidade_p90,
+                "melhoria": conformidade_p90 - conformidade_atual
+            }
+
+        return analise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erro ao analisar P90: {e}")
