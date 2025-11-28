@@ -66,17 +66,8 @@ import RequireLogin from "@/components/layout/RequireLogin";
 const queryClient = new QueryClient();
 
 const App = () => (
-  <Auth0Provider
-    domain={import.meta.env.VITE_AUTH0_DOMAIN}
-    clientId={import.meta.env.VITE_AUTH0_CLIENT_ID}
-    authorizationParams={{
-      redirect_uri: import.meta.env.VITE_AUTH0_REDIRECT_URI,
-      audience: import.meta.env.VITE_AUTH0_AUDIENCE,
-      scope: "openid profile email",
-    }}
-  >
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
+  <QueryClientProvider client={queryClient}>
+    <AuthProvider>
         <TooltipProvider>
           <Toaster />
           <Sonner />
@@ -235,7 +226,6 @@ const App = () => (
         </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
-  </Auth0Provider>
 );
 
 // Global handler: when server forces logout, redirect user to login preserving current path
