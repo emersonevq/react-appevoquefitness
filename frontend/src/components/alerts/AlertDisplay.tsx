@@ -143,10 +143,10 @@ export default function AlertDisplay() {
   const currentAlert = visibleAlerts[0];
 
   useEffect(() => {
-    if (currentAlert?.id) {
+    if (currentAlert?.id && user) {
       markAlertAsViewed(currentAlert.id);
     }
-  }, [currentAlert?.id]);
+  }, [currentAlert?.id, user]);
 
 
   if (loading || !currentAlert) return null;
