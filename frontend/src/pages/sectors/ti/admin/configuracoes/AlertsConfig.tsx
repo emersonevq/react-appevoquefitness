@@ -175,6 +175,47 @@ export default function AlertsConfig() {
             ))}
           </select>
         </div>
+        <div>
+          <div className="text-sm text-muted-foreground mb-2">
+            Imagem do alerta (opcional)
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImagemChange}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Escolher imagem
+            </Button>
+            {imagemFile && (
+              <span className="text-sm text-muted-foreground">
+                {imagemFile.name}
+              </span>
+            )}
+          </div>
+          {imagemPreview && (
+            <div className="mt-3 relative inline-block">
+              <img
+                src={imagemPreview}
+                alt="Preview"
+                className="max-w-xs max-h-40 rounded-md border"
+              />
+              <button
+                onClick={limparImagem}
+                className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 hover:opacity-80"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <Button onClick={create} disabled={loading}>
             {loading ? "Salvando..." : "Criar alerta"}
