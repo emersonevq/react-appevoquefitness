@@ -119,6 +119,10 @@ export default function AlertDisplay() {
     markAlertAsViewed(alertId);
   };
 
+  const handleEntendido = (alertId: number) => {
+    dismissAlert(alertId);
+  };
+
   const visibleAlerts = alerts.filter((alert) => {
     if (dismissedAlerts.includes(alert.id)) return false;
 
