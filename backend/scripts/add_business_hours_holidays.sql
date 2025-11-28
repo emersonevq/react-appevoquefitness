@@ -2,6 +2,7 @@
 -- SCRIPT DE ADIÇÃO DE FERIADOS E EXTENSÃO DE HORÁRIOS COMERCIAIS
 -- =====================================================================
 -- Este script adiciona suporte a feriados e estende horários comerciais para sábado/domingo
+-- A tabela sla_business_hours já existe, vamos apenas adicionar novos registros
 -- Copie e execute no MySQL Workbench
 -- =====================================================================
 
@@ -13,7 +14,7 @@ CREATE TABLE IF NOT EXISTS `sla_feriados` (
     `data` DATE NOT NULL UNIQUE COMMENT 'Data do feriado (YYYY-MM-DD)',
     `nome` VARCHAR(150) NOT NULL COMMENT 'Nome do feriado (ex: Natal, Ano Novo)',
     `descricao` TEXT NULL COMMENT 'Descrição do feriado',
-    `ativo` BOOLEAN DEFAULT TRUE COMMENT 'Indica se o feriado está ativo',
+    `ativo` TINYINT(1) DEFAULT 1 COMMENT 'Indica se o feriado está ativo',
     `criado_em` DATETIME NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Data de criação',
     `atualizado_em` DATETIME NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Data da última atualização',
     INDEX `idx_data` (`data`),
@@ -22,21 +23,19 @@ CREATE TABLE IF NOT EXISTS `sla_feriados` (
 COMMENT='Feriados para exclusão no cálculo de SLA';
 
 -- =====================================================================
--- 2. ESTENDER TABELA sla_business_hours COM SÁBADO E DOMINGO
+-- 2. ADICIONAR SÁBADO E DOMINGO NA TABELA EXISTENTE sla_business_hours
 -- =====================================================================
 -- Inserir sábado (5) e domingo (6) se não existirem
-INSERT INTO `sla_business_hours` (
+INSERT IGNORE INTO `sla_business_hours` (
     `dia_semana`,
     `hora_inicio`,
     `hora_fim`,
-    `ativo`
+    `ativo`,
+    `criado_em`,
+    `atualizado_em`
 ) VALUES
-(5, '00:00', '00:00', FALSE),  -- Sábado (desativado por padrão)
-(6, '00:00', '00:00', FALSE)   -- Domingo (desativado por padrão)
-ON DUPLICATE KEY UPDATE
-    `hora_inicio` = VALUES(`hora_inicio`),
-    `hora_fim` = VALUES(`hora_fim`),
-    `ativo` = VALUES(`ativo`);
+(5, '00:00', '00:00', 0, NOW(), NOW()),  -- Sábado (desativado por padrão)
+(6, '00:00', '00:00', 0, NOW(), NOW());  -- Domingo (desativado por padrão)
 
 -- =====================================================================
 -- 3. ADICIONAR ALGUNS FERIADOS BRASILEIROS PADRÃO (EXEMPLO)
