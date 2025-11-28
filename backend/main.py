@@ -42,6 +42,20 @@ try:
 except Exception as e:
     print(f"⚠️  Erro ao inicializar scheduler de SLA: {e}")
 
+# Pré-carregar cache do banco na startup
+try:
+    from ti.services.sla_cache import SLACacheManager
+    from core.db import SessionLocal
+
+    db_warmup = SessionLocal()
+    try:
+        stats = SLACacheManager.warmup_from_database(db_warmup)
+        print(f"✅ Cache pré-carregado: {stats['carregados']} entradas carregadas, {stats['expirados']} expiradas, {stats['erros']} erros")
+    finally:
+        db_warmup.close()
+except Exception as e:
+    print(f"⚠️  Erro ao pré-carregar cache: {e}")
+
 # Static uploads mount
 _base_dir = Path(__file__).resolve().parent
 _uploads = _base_dir / "uploads"
