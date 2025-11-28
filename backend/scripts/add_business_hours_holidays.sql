@@ -38,9 +38,9 @@ INSERT IGNORE INTO `sla_business_hours` (
 (6, '00:00', '00:00', 0, NOW(), NOW());  -- Domingo (desativado por padrão)
 
 -- =====================================================================
--- 3. ADICIONAR ALGUNS FERIADOS BRASILEIROS PADRÃO (EXEMPLO)
+-- 3. ADICIONAR FERIADOS BRASILEIROS (OPCIONAL)
 -- =====================================================================
--- Nota: Ajuste os anos conforme necessário
+-- Nota: Ajuste os anos conforme necessário. Use INSERT IGNORE para não duplicar.
 INSERT IGNORE INTO `sla_feriados` (
     `data`,
     `nome`,
