@@ -34,6 +34,14 @@ try:
 except Exception as e:
     print(f"⚠️  Erro ao migrar historico_status: {e}")
 
+# Inicializar scheduler de recalculação automática de SLA
+try:
+    from ti.services.sla_scheduler import init_scheduler
+    init_scheduler()
+    print("✅ Scheduler de SLA iniciado com sucesso")
+except Exception as e:
+    print(f"⚠️  Erro ao inicializar scheduler de SLA: {e}")
+
 # Static uploads mount
 _base_dir = Path(__file__).resolve().parent
 _uploads = _base_dir / "uploads"
