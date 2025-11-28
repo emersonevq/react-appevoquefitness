@@ -293,6 +293,8 @@ def sincronizar_todos_chamados(db: Session = Depends(get_db)):
                 ).first()
 
                 sla_status = SLACalculator.get_sla_status(db, chamado)
+                if not isinstance(sla_status, dict):
+                    sla_status = {}
 
                 if existing:
                     # Atualiza registro existente
