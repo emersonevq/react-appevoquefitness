@@ -275,10 +275,8 @@ def delete_alert(alert_id: int, db: Session = Depends(get_db)):
 @router.post("/{alert_id}/visualizar")
 def mark_alert_viewed(
     alert_id: int,
-    db: Session = Depends(get_db),
-    usuario_id: Optional[str] = None,
-    usuario_email: Optional[str] = None,
-    usuario_nome: Optional[str] = None
+    request_data: AlertViewRequest,
+    db: Session = Depends(get_db)
 ):
     """
     Marca um alerta como visualizado por um usuário
@@ -289,8 +287,9 @@ def mark_alert_viewed(
         if not alert:
             raise HTTPException(status_code=404, detail="Alerta não encontrado")
 
-        if not usuario_id:
-            usuario_id = "anonymous"
+        usuario_id = request_data.usuario_id or "anonymous"
+        usuario_email = request_data.usuario_email or usuario_id
+        usuario_nome = request_data.usuario_nome or usuario_id
 
         # Carregar array de usuários que visualizaram
         usuarios_visualizaram = alert.usuarios_visualizaram
@@ -307,8 +306,8 @@ def mark_alert_viewed(
         # Criar objeto de visualização com timestamp
         visualizacao = {
             "id": usuario_id,
-            "email": usuario_email or usuario_id,
-            "nome": usuario_nome or usuario_id,
+            "email": usuario_email,
+            "nome": usuario_nome,
             "visualizado_em": datetime.now().isoformat()
         }
 
@@ -320,7 +319,7 @@ def mark_alert_viewed(
             alert.usuarios_visualizaram = usuarios_visualizaram
             db.commit()
             db.refresh(alert)
-            print(f"[ALERTS] Alerta {alert_id} marcado como visualizado por {usuario_email or usuario_id}")
+            print(f"[ALERTS] Alerta {alert_id} marcado como visualizado por {usuario_email}")
 
         return {"ok": True, "message": "Alerta marcado como visualizado"}
 
