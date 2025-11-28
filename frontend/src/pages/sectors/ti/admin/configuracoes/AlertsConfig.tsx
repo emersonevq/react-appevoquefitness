@@ -122,6 +122,13 @@ export default function AlertsConfig() {
       formData.append("message", message);
       formData.append("severity", severity);
 
+      // Enviar páginas como JSON string
+      if (selectedPages.length > 0) {
+        formData.append("pages", JSON.stringify(selectedPages));
+      } else {
+        formData.append("pages", JSON.stringify([]));
+      }
+
       if (imagemFile) {
         formData.append("imagem", imagemFile);
       }
@@ -140,6 +147,7 @@ export default function AlertsConfig() {
         setMessage("");
         setDescription("");
         setSeverity("low");
+        setSelectedPages([]);
         limparImagem();
         await loadAlerts();
       }
