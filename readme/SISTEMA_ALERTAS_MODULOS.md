@@ -16,6 +16,7 @@ Foi implementado um novo sistema de alertas completo que permite:
 ### Backend (Python/FastAPI)
 
 #### Modelo: `Alert` (backend/ti/models/alert.py)
+
 - `id` - ID único do alerta
 - `title` - Título do alerta (obrigatório)
 - `message` - Mensagem do alerta (obrigatório)
@@ -29,6 +30,7 @@ Foi implementado um novo sistema de alertas completo que permite:
 - `imagem_blob` / `imagem_mime_type` - Armazenamento de imagem
 
 #### Modelo: `AlertView` (backend/ti/models/alert.py)
+
 - Rastreia visualizações de alertas por usuário
 - `alert_id` - FK para Alert
 - `user_id` - FK para User
@@ -72,6 +74,7 @@ GET /api/alerts/{alert_id}/imagem
 ### Frontend (React/TypeScript)
 
 #### AdminConfig: `AlertsConfig.tsx`
+
 - Local: `frontend/src/pages/sectors/ti/admin/configuracoes/AlertsConfig.tsx`
 - Interface para criar e gerenciar alertas
 - Seleção de módulos/páginas com categorias
@@ -79,6 +82,7 @@ GET /api/alerts/{alert_id}/imagem
 - Visualização de alertas existentes
 
 #### Display: `AlertsDisplay.tsx`
+
 - Local: `frontend/src/components/alerts/AlertsDisplay.tsx`
 - Exibe alertas filtrados pela página atual
 - Rastreia visualizações automaticamente
@@ -86,6 +90,7 @@ GET /api/alerts/{alert_id}/imagem
 - Responsivo e acessível
 
 #### Config: `alert-pages.ts`
+
 - Local: `frontend/src/config/alert-pages.ts`
 - Mapa centralizado de todas as páginas do sistema
 - Funções helper para verificar se alerta deve aparecer em uma página
@@ -109,6 +114,7 @@ GET /api/alerts/{alert_id}/imagem
 ### 2. Ver Alertas
 
 Os alertas aparecem automaticamente:
+
 - **Na página inicial**: Se "Exibir na página inicial" estiver marcado
 - **Nos módulos selecionados**: Quando o usuário acessa esses módulos
 - Os alertas são fixos no topo da página
@@ -149,6 +155,7 @@ Os alertas aparecem automaticamente:
 ## IDs de Páginas Disponíveis
 
 **Públicas:**
+
 - `home` - Página Inicial
 - `login` - Página de Login
 - `forgotPassword` - Recuperar Senha
@@ -156,6 +163,7 @@ Os alertas aparecem automaticamente:
 - `accessDenied` - Acesso Negado
 
 **Setores:**
+
 - `sectorTI` - Setor de TI
 - `sectorBI` - Portal de BI
 - `sectorCompras` - Setor de Compras
@@ -167,6 +175,7 @@ Os alertas aparecem automaticamente:
 - `sectorOutrosServicos` - Outros Serviços
 
 **Admin TI:**
+
 - `tiAdminOverview` - Dashboard Admin TI
 - `tiAdminChamados` - Gestão de Chamados
 - `tiAdminUsuarios` - Gestão de Usuários
@@ -180,11 +189,12 @@ Os alertas aparecem automaticamente:
 O sistema registra quando um usuário vê um alerta pela primeira vez na tabela `alert_view`:
 
 ```sql
-SELECT * FROM alert_view 
+SELECT * FROM alert_view
 WHERE alert_id = 1 AND user_id = 5;
 ```
 
 Isso impede que o alerta seja mostrado repetidamente:
+
 - ✅ Na primeira visita: Alerta é exibido e marcado como visto
 - ✅ Na segunda visita: Alerta ainda aparece, mas o sistema sabe que já foi visto
 - ❌ Depois de descartar: Alerta não aparece mais (localStorage)
@@ -192,15 +202,18 @@ Isso impede que o alerta seja mostrado repetidamente:
 ## Problemas Conhecidos e Solução
 
 ### Backend não inicia
+
 Se o backend não iniciar corretamente:
 
 1. **Instale as dependências:**
+
    ```bash
    cd backend
    pip install -r requirements.txt
    ```
 
 2. **Execute o servidor:**
+
    ```bash
    python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
    ```
@@ -214,11 +227,13 @@ Se o backend não iniciar corretamente:
    ```
 
 ### Alertas não aparecem
+
 - Verifique se as páginas selecionadas correspondem aos IDs em `alert-pages.ts`
 - Verifique se o campo `ativo` está como `true`
 - Verifique o console do navegador para erros
 
 ### Imagens não carregam
+
 - Verifique se o MIME type está correto
 - Tamanho máximo: 5MB
 - Formatos suportados: PNG, JPG, WEBP

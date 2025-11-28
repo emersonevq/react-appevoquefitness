@@ -72,7 +72,7 @@ export default function AlertsConfig() {
   const [selectedPages, setSelectedPages] = useState<string[]>([]);
   const [showOnHome, setShowOnHome] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(["Setores"])
+    new Set(["Setores"]),
   );
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
@@ -127,7 +127,9 @@ export default function AlertsConfig() {
 
   const togglePage = (pageId: string) => {
     setSelectedPages((prev) =>
-      prev.includes(pageId) ? prev.filter((p) => p !== pageId) : [...prev, pageId]
+      prev.includes(pageId)
+        ? prev.filter((p) => p !== pageId)
+        : [...prev, pageId],
     );
   };
 
@@ -203,7 +205,7 @@ export default function AlertsConfig() {
       acc[page.id] = page.label;
       return acc;
     },
-    {} as Record<string, string>
+    {} as Record<string, string>,
   );
 
   return (
@@ -218,7 +220,8 @@ export default function AlertsConfig() {
             Alertas do Sistema
           </h2>
           <p className="text-muted-foreground mt-1">
-            Crie e gerencie alertas que serão exibidos nos setores e módulos específicos
+            Crie e gerencie alertas que serão exibidos nos setores e módulos
+            específicos
           </p>
         </div>
       </div>
@@ -509,9 +512,10 @@ export default function AlertsConfig() {
                 severityConfig[alert.severity as keyof typeof severityConfig] ||
                 severityConfig.low;
               const Icon = config.icon;
-              const displayPages = (alert.pages && alert.pages.length > 0)
-                ? alert.pages.map(p => pagesMap[p] || p).join(", ")
-                : "Todas as páginas";
+              const displayPages =
+                alert.pages && alert.pages.length > 0
+                  ? alert.pages.map((p) => pagesMap[p] || p).join(", ")
+                  : "Todas as páginas";
 
               return (
                 <Card
@@ -571,7 +575,10 @@ export default function AlertsConfig() {
                               {config.label}
                             </Badge>
                             {alert.show_on_home && (
-                              <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20">
+                              <Badge
+                                variant="outline"
+                                className="bg-green-500/10 text-green-600 border-green-500/20"
+                              >
                                 <Home className="w-3 h-3 mr-1" />
                                 Página Inicial
                               </Badge>
