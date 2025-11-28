@@ -221,6 +221,28 @@ export default function Overview() {
     }
   }, [slaMetricsData]);
 
+  const atualizarMetricasMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post("/sla/recalcular/p90-incremental");
+      return response.data;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["metrics-basic"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-sla"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-daily"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-weekly"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-performance"] });
+
+      const prioridades = Object.keys(data.prioridades || {});
+      toast.success(`Métricas atualizadas! ${prioridades.length} prioridades recalculadas.`);
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.detail || "Erro ao atualizar métricas de SLA"
+      );
+    },
+  });
+
   // Pré-aquece cache na primeira carga
   useEffect(() => {
     const preWarmCache = async () => {
