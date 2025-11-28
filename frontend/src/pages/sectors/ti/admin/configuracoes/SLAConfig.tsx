@@ -161,7 +161,7 @@ export function SLA() {
     hora_fim: "18:00",
   });
 
-  const [holidayData, setHolidayData] = useState({
+  const [feriadoData, setFeriadoData] = useState({
     data: new Date().toISOString().split("T")[0],
     nome: "",
     descricao: "",
