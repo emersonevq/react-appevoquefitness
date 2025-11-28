@@ -129,13 +129,6 @@ export default function Index() {
         </div>
       )}
 
-      {/* Alerts */}
-      <AlertsDisplay
-        alerts={alerts}
-        onDismiss={dismiss}
-        dismissed={dismissed}
-      />
-
       {/* Hero */}
       <section className="relative overflow-hidden">
         <div className="container py-8 sm:py-16">
