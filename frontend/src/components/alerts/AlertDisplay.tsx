@@ -156,14 +156,8 @@ export default function AlertDisplay() {
   const config = severityConfig[severity];
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-      onClick={() => dismissAlert(currentAlert.id)}
-    >
-      <div
-        className="relative w-full max-w-[400px] aspect-[9/16] animate-in zoom-in-95 fade-in duration-300"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="relative w-full max-w-[400px] aspect-[9/16] animate-in zoom-in-95 fade-in duration-300">
         <div className="relative w-full h-full rounded-3xl overflow-hidden shadow-2xl">
           {currentAlert.imagem_blob ? (
             <div className="absolute inset-0">
@@ -187,16 +181,6 @@ export default function AlertDisplay() {
             <div className="space-y-3">
               <div className="h-1 bg-white/20 rounded-full overflow-hidden">
                 <div className="h-full w-full bg-white/80 rounded-full" />
-              </div>
-
-              <div className="flex justify-end">
-                <button
-                  onClick={() => dismissAlert(currentAlert.id)}
-                  className="p-2 rounded-full bg-black/30 hover:bg-black/50 backdrop-blur-sm transition-colors"
-                  aria-label="Fechar"
-                >
-                  <X className="h-5 w-5 text-white" />
-                </button>
               </div>
             </div>
 
@@ -224,7 +208,7 @@ export default function AlertDisplay() {
 
             <div className="space-y-3">
               <button
-                onClick={() => dismissAlert(currentAlert.id)}
+                onClick={() => handleEntendido(currentAlert.id)}
                 className={`
                   w-full py-3 rounded-full
                   ${config.accentColor} ${config.buttonHover}
@@ -235,10 +219,6 @@ export default function AlertDisplay() {
               >
                 Entendido
               </button>
-
-              <p className="text-center text-white/40 text-xs">
-                Toque fora para fechar
-              </p>
             </div>
           </div>
         </div>
