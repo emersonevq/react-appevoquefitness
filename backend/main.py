@@ -26,6 +26,14 @@ try:
 except Exception as e:
     print(f"⚠️  Erro ao criar índices de performance: {e}")
 
+# Criar tabela de cache de métricas na inicialização
+try:
+    from ti.scripts.create_metrics_cache_table import create_metrics_cache_table
+    create_metrics_cache_table()
+    print("✅ Tabela metrics_cache_db criada com sucesso")
+except Exception as e:
+    print(f"⚠️  Erro ao criar tabela metrics_cache_db: {e}")
+
 # Executar migração do historico_status na inicialização
 try:
     from ti.scripts.migrate_historico_status import migrate_historico_status
