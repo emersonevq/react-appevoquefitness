@@ -13,6 +13,7 @@ import {
   Trash2,
   Plus,
   Sparkles,
+  Monitor,
 } from "lucide-react";
 import {
   Card,
@@ -22,6 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ALERT_PAGES, groupPagesByCategory } from "@/config/alert-pages";
 
 type MediaItem = { id: number | string; url?: string; type?: string };
 
