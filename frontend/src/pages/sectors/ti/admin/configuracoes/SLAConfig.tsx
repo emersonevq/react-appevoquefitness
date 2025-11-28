@@ -389,6 +389,27 @@ export function SLA() {
     },
   });
 
+  const zerarCacheMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post("/sla/cache/reset-all");
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sla-config"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-basic"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-sla"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-daily"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-weekly"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-performance"] });
+      toast.success("Cache de SLA resetado com sucesso! Contagem recomeçará do zero.");
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.detail || "Erro ao resetar cache de SLA",
+      );
+    },
+  });
+
   const handleAddConfig = () => {
     setEditingConfig(null);
     setFormData({
