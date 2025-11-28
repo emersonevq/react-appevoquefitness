@@ -1051,16 +1051,22 @@ def analisar_p90_recomendado(db: Session = Depends(get_db)):
             print(f"  - SLA configurado: {config.tempo_resolucao_horas}h")
 
             # Busca APENAS chamados concluídos/cancelados dessa prioridade
-            chamados = db.query(Chamado).filter(
-                and_(
-                    Chamado.prioridade == prioridade,
-                    Chamado.data_abertura >= data_inicio,
-                    Chamado.data_abertura <= agora,
-                    Chamado.deletado_em.is_(None),
-                    Chamado.status.in_(["Concluído", "Cancelado"]),
-                    Chamado.data_conclusao.isnot(None) | Chamado.cancelado_em.isnot(None)
-                )
-            ).all()
+            # Se houve reset, apenas chamados posteriores ao reset
+            query_filters = [
+                Chamado.prioridade == prioridade,
+                Chamado.data_abertura >= data_inicio,
+                Chamado.data_abertura <= agora,
+                Chamado.deletado_em.is_(None),
+                Chamado.status.in_(["Concluído", "Cancelado"]),
+                or_(Chamado.data_conclusao.isnot(None), Chamado.cancelado_em.isnot(None))
+            ]
+
+            # Se houve reset, ignora chamados abertos antes do reset
+            if config.ultimo_reset_em:
+                print(f"  - Filtrando apenas chamados posteriores ao reset ({config.ultimo_reset_em})")
+                query_filters.append(Chamado.data_abertura >= config.ultimo_reset_em)
+
+            chamados = db.query(Chamado).filter(and_(*query_filters)).all()
 
             print(f"  - Chamados encontrados: {len(chamados)}")
 
