@@ -53,7 +53,7 @@ interface BusinessHours {
   atualizado_em: string | null;
 }
 
-interface Holiday {
+interface Feriado {
   id: number;
   data: string;
   nome: string;
