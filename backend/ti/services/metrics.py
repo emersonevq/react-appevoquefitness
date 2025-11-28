@@ -68,19 +68,20 @@ class PersistentMetricsCache:
 
     @staticmethod
     def set(db: Session, key: str, value: dict, ttl_minutes: int = 10):
-        """Armazena valor no cache persistente"""
+        """Armazena valor no cache persistente com tratamento de race condition"""
         try:
             now = datetime.utcnow()
             expires_at = now + timedelta(minutes=ttl_minutes)
-            
+
             cache_entry = db.query(MetricsCacheDB).filter(
                 MetricsCacheDB.cache_key == key
             ).first()
-            
+
             if cache_entry:
                 cache_entry.cache_value = value
                 cache_entry.calculated_at = now
                 cache_entry.expires_at = expires_at
+                db.add(cache_entry)
             else:
                 cache_entry = MetricsCacheDB(
                     cache_key=key,
@@ -89,11 +90,33 @@ class PersistentMetricsCache:
                     expires_at=expires_at
                 )
                 db.add(cache_entry)
-            
+
             db.commit()
         except Exception as e:
-            print(f"Erro ao salvar cache persistente {key}: {e}")
             db.rollback()
+            try:
+                cache_entry = db.query(MetricsCacheDB).filter(
+                    MetricsCacheDB.cache_key == key
+                ).first()
+
+                if cache_entry:
+                    cache_entry.cache_value = value
+                    cache_entry.calculated_at = datetime.utcnow()
+                    cache_entry.expires_at = datetime.utcnow() + timedelta(minutes=ttl_minutes)
+                    db.add(cache_entry)
+                    db.commit()
+                else:
+                    cache_entry = MetricsCacheDB(
+                        cache_key=key,
+                        cache_value=value,
+                        calculated_at=datetime.utcnow(),
+                        expires_at=datetime.utcnow() + timedelta(minutes=ttl_minutes)
+                    )
+                    db.add(cache_entry)
+                    db.commit()
+            except Exception as retry_error:
+                db.rollback()
+                print(f"Erro ao salvar cache persistente {key}: {retry_error}")
 
     @staticmethod
     def clear(db: Session, key: str = None):
