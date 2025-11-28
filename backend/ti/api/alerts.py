@@ -22,6 +22,9 @@ def list_alerts(db: Session = Depends(get_db)):
 @router.post("", response_model=AlertOut)
 def create_alert(payload: AlertCreate, db: Session = Depends(get_db)):
     try:
+        import traceback
+        print(f"[ALERTS] Criando alerta com payload: {payload}")
+
         a = Alert(
             title=payload.title,
             message=payload.message,
@@ -30,14 +33,19 @@ def create_alert(payload: AlertCreate, db: Session = Depends(get_db)):
             end_at=payload.end_at,
             link=payload.link,
             media_id=payload.media_id,
-            ativo=payload.ativo,
+            ativo=payload.ativo if payload.ativo is not None else True,
         )
+        print(f"[ALERTS] Objeto Alert criado")
         db.add(a)
         db.commit()
         db.refresh(a)
+        print(f"[ALERTS] Alerta salvo com ID: {a.id}")
         return a
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao criar alerta: {e}")
+        import traceback
+        print(f"[ALERTS] ERRO ao criar alerta: {str(e)}")
+        print(f"[ALERTS] Traceback completo:\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Erro ao criar alerta: {str(e)}")
 
 @router.delete("/{alert_id}")
 def delete_alert(alert_id: int, db: Session = Depends(get_db)):
