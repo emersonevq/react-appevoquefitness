@@ -433,8 +433,17 @@ export function SLA() {
 
   const handleAddHours = () => {
     setEditingHours(null);
+    // Encontra o primeiro dia sem horário configurado
+    let firstAvailableDay = 0;
+    for (let i = 0; i < DIAS_SEMANA.length; i++) {
+      const exists = businessHours.some((h: BusinessHours) => h.dia_semana === i);
+      if (!exists) {
+        firstAvailableDay = i;
+        break;
+      }
+    }
     setHoursData({
-      dia_semana: 0,
+      dia_semana: firstAvailableDay,
       hora_inicio: "08:00",
       hora_fim: "18:00",
     });
