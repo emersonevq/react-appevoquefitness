@@ -50,14 +50,16 @@ class SLACacheManager:
     _lock = threading.Lock()
 
     # Configurações de TTL por tipo de métrica
+    # IMPORTANTE: TTL muito longo (24 horas) - cache persiste até mudança de status
+    # Cache é invalidado APENAS quando há mudança de chamados, não por tempo
     CACHE_TTL = {
-        "sla_compliance_24h": 30 * 60,  # 30 minutos (aumentado de 5)
-        "sla_compliance_mes": 60 * 60,  # 60 minutos (aumentado de 15)
-        "sla_distribution": 60 * 60,  # 60 minutos (aumentado de 15)
-        "tempo_resposta_24h": 30 * 60,  # 30 minutos (aumentado de 5)
-        "tempo_resposta_mes": 60 * 60,  # 60 minutos (aumentado de 15)
-        "chamado_sla_status": 5 * 60,  # 5 minutos (aumentado de 2, é menos sensível)
-        "metrics_basic": 5 * 60,  # 5 minutos (aumentado de 2)
+        "sla_compliance_24h": 24 * 60 * 60,  # 24 horas - persiste até mudança
+        "sla_compliance_mes": 24 * 60 * 60,  # 24 horas - persiste até mudança
+        "sla_distribution": 24 * 60 * 60,  # 24 horas - persiste até mudança
+        "tempo_resposta_24h": 24 * 60 * 60,  # 24 horas - persiste até mudança
+        "tempo_resposta_mes": 24 * 60 * 60,  # 24 horas - persiste até mudança
+        "chamado_sla_status": 24 * 60 * 60,  # 24 horas - persiste até mudança
+        "metrics_basic": 24 * 60 * 60,  # 24 horas - persiste até mudança
     }
 
     # Chaves de cache relacionadas para invalidação
