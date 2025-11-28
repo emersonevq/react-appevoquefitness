@@ -131,7 +131,11 @@ export default function Index() {
       )}
 
       {/* Alerts */}
-      <AlertsDisplay alerts={alerts} onDismiss={dismiss} dismissed={dismissed} />
+      <AlertsDisplay
+        alerts={alerts}
+        onDismiss={dismiss}
+        dismissed={dismissed}
+      />
 
       {/* Hero */}
       <section className="relative overflow-hidden">

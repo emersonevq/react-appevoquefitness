@@ -33,7 +33,7 @@ export function AlertsDisplay({
   }, [alerts, dismissed]);
 
   const activeAlerts = alerts.filter(
-    (a) => a && a.ativo && visibleAlerts.includes(a.id)
+    (a) => a && a.ativo && visibleAlerts.includes(a.id),
   );
 
   if (!activeAlerts.length) return null;
@@ -66,9 +66,7 @@ export function AlertsDisplay({
                 <div
                   className={`px-4 py-3 text-sm font-medium ${a.severity === "danger" ? "bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-100" : a.severity === "warning" ? "bg-yellow-50 dark:bg-yellow-950 text-yellow-800 dark:text-yellow-100" : "bg-blue-50 dark:bg-blue-950 text-blue-800 dark:text-blue-100"}`}
                 >
-                  {a.title && (
-                    <div className="font-semibold">{a.title}</div>
-                  )}
+                  {a.title && <div className="font-semibold">{a.title}</div>}
                   <div>{a.message}</div>
                 </div>
               )}
