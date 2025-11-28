@@ -122,7 +122,7 @@ export default function AlertDisplay() {
   if (visibleAlerts.length === 0) return null;
 
   return (
-    <div className="w-full space-y-3 mb-6">
+    <div className="fixed inset-x-0 top-4 z-50 flex flex-col items-center gap-4 pointer-events-none px-4">
       {visibleAlerts.map((alert) => {
         const config =
           severityConfig[alert.severity as keyof typeof severityConfig] ||
@@ -130,51 +130,46 @@ export default function AlertDisplay() {
         const Icon = config.icon;
 
         return (
-          <div key={alert.id} className="space-y-2">
-            {/* Imagem se existir */}
-            {alert.imagem_blob && (
-              <div className="relative group rounded-lg overflow-hidden border-2 border-border shadow-md">
-                <img
-                  src={`data:${alert.imagem_mime_type || "image/jpeg"};base64,${alert.imagem_blob}`}
-                  alt="Alerta"
-                  className="w-full max-h-96 object-cover"
-                />
-                <button
-                  onClick={() => dismissAlert(alert.id)}
-                  className="absolute top-3 right-3 bg-background/90 hover:bg-background rounded-full p-2 text-foreground shadow-md transition"
-                  aria-label="Fechar alerta"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-            )}
-
-            {/* Alerta texto/mensagem */}
+          <div
+            key={alert.id}
+            className="pointer-events-auto w-full max-w-md animate-in slide-in-from-top duration-500"
+          >
             <div
               className={`
-                relative rounded-lg border p-4
+                relative rounded-lg border overflow-hidden shadow-lg
                 ${config.bgColor} ${config.borderColor}
-                animate-in slide-in-from-top duration-500
               `}
             >
-              <div className="flex gap-3">
-                {/* Ícone */}
-                <div className="flex-shrink-0 mt-0.5">
-                  <Icon className={`h-5 w-5 ${config.iconColor}`} />
-                </div>
+              {/* Container com imagem e conteúdo */}
+              <div className="flex flex-col gap-3 p-4">
+                {/* Imagem se existir - pequena e centralizada */}
+                {alert.imagem_blob && (
+                  <div className="relative w-32 h-32 mx-auto rounded-lg overflow-hidden border border-border/50 shadow-md flex-shrink-0">
+                    <img
+                      src={`data:${alert.imagem_mime_type || "image/jpeg"};base64,${alert.imagem_blob}`}
+                      alt="Alerta"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
 
-                {/* Conteúdo */}
-                <div className="flex-1 min-w-0">
-                  <h3 className={`font-semibold ${config.textColor}`}>
-                    {alert.title}
-                  </h3>
-                  <p className={`mt-1 text-sm ${config.textColor} opacity-90`}>
-                    {alert.message}
-                  </p>
+                {/* Conteúdo do Alerta */}
+                <div className="flex-1 text-center">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    <Icon className={`h-5 w-5 ${config.iconColor} flex-shrink-0`} />
+                    <h3 className={`font-bold text-base ${config.textColor}`}>
+                      {alert.title}
+                    </h3>
+                  </div>
+
+                  {alert.message && (
+                    <p className={`text-sm ${config.textColor} opacity-90 leading-relaxed`}>
+                      {alert.message}
+                    </p>
+                  )}
+
                   {alert.description && (
-                    <p
-                      className={`mt-2 text-xs ${config.textColor} opacity-75`}
-                    >
+                    <p className={`text-xs ${config.textColor} opacity-75 mt-2 italic`}>
                       {alert.description}
                     </p>
                   )}
@@ -184,15 +179,28 @@ export default function AlertDisplay() {
                 <button
                   onClick={() => dismissAlert(alert.id)}
                   className={`
-                    flex-shrink-0 rounded-md p-1
-                    hover:bg-black/10 dark:hover:bg-white/10
-                    transition-colors
+                    self-center mt-2 px-6 py-2 rounded-md text-sm font-medium
+                    bg-background/90 hover:bg-background text-foreground
+                    transition-colors duration-200
                   `}
                   aria-label="Fechar alerta"
                 >
-                  <X className={`h-4 w-4 ${config.textColor}`} />
+                  Fechar
                 </button>
               </div>
+
+              {/* Botão X no canto superior direito */}
+              <button
+                onClick={() => dismissAlert(alert.id)}
+                className={`
+                  absolute top-2 right-2 p-1.5 rounded-full
+                  bg-background/80 hover:bg-background
+                  transition-colors duration-200
+                `}
+                aria-label="Fechar alerta"
+              >
+                <X className={`h-4 w-4 ${config.textColor}`} />
+              </button>
             </div>
           </div>
         );
