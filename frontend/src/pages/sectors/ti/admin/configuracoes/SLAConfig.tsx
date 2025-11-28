@@ -436,7 +436,9 @@ export function SLA() {
     // Encontra o primeiro dia sem horário configurado
     let firstAvailableDay = 0;
     for (let i = 0; i < DIAS_SEMANA.length; i++) {
-      const exists = businessHours.some((h: BusinessHours) => h.dia_semana === i);
+      const exists = businessHours.some(
+        (h: BusinessHours) => h.dia_semana === i,
+      );
       if (!exists) {
         firstAvailableDay = i;
         break;

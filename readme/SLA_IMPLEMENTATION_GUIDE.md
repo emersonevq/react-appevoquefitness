@@ -5,6 +5,7 @@ Este documento descreve a implementação completa do sistema de cálculo de SLA
 ## 📋 Visão Geral
 
 O sistema foi projetado para:
+
 - ✅ Calcular SLA baseado em **horário comercial** configurable
 - ✅ Descontar tempo quando chamado está **"Em análise"** (pausa SLA)
 - ✅ Considerar **feriados** e **fins de semana**
@@ -17,6 +18,7 @@ O sistema foi projetado para:
 ### Componentes Principais
 
 #### 1. **Cálculo de SLA** (`backend/ti/services/sla.py`)
+
 - Calcula horas de negócio considerando horário comercial
 - Desconta períodos em "Em análise"
 - Suporta feriados
@@ -45,6 +47,7 @@ sla_status = SLACalculator.get_sla_status(db_session, chamado)
 ```
 
 #### 2. **Agendador Automático** (`backend/ti/services/sla_scheduler.py`)
+
 - Roda em thread separada
 - Executa recalculação automaticamente **todos os dias às 00:00** (horário de Brasília)
 - Pré-aquece o cache com métricas principais
@@ -58,6 +61,7 @@ init_scheduler()  # Inicia o scheduler automático
 ```
 
 #### 3. **Script de Recalculação** (`backend/ti/scripts/recalculate_sla_complete.py`)
+
 - Recalcula SLA de **todos** os chamados existentes
 - Calcula estatísticas agregadas (tempo médio, compliance)
 - Pode ser executado manualmente quando necessário
@@ -71,34 +75,38 @@ POST /api/sla/scheduler/recalcular-agora
 ```
 
 #### 4. **Sistema de Cache** (`backend/ti/services/sla_cache.py`)
+
 - Cache em memória com TTL
 - Cache em banco de dados para persistência
 - Invalidação inteligente de caches relacionados
 
 #### 5. **Status de SLA** (`backend/ti/services/sla_status.py`)
+
 Estados mutuamente exclusivos:
 
-| Estado | Descrição |
-|--------|-----------|
-| **CUMPRIDO** | Chamado fechado dentro do SLA |
-| **VIOLADO** | Chamado fechado fora do SLA |
-| **DENTRO_PRAZO** | Aberto, tempo < 80% do limite |
-| **PROXIMO_VENCER** | Aberto, tempo 80-100% do limite |
-| **VENCIDO_ATIVO** | Aberto, tempo > 100% do limite |
-| **PAUSADO** | Em status "Aguardando" (não conta tempo) |
-| **SEM_SLA** | Sem configuração de SLA |
+| Estado             | Descrição                                |
+| ------------------ | ---------------------------------------- |
+| **CUMPRIDO**       | Chamado fechado dentro do SLA            |
+| **VIOLADO**        | Chamado fechado fora do SLA              |
+| **DENTRO_PRAZO**   | Aberto, tempo < 80% do limite            |
+| **PROXIMO_VENCER** | Aberto, tempo 80-100% do limite          |
+| **VENCIDO_ATIVO**  | Aberto, tempo > 100% do limite           |
+| **PAUSADO**        | Em status "Aguardando" (não conta tempo) |
+| **SEM_SLA**        | Sem configuração de SLA                  |
 
 ## 🔧 Configuração
 
 ### 1. Configurar Horários Comerciais
 
 Via UI em `/admin/configuracoes/sla`:
+
 - Abra a seção "Horários Comerciais"
 - Clique em "Adicionar Horário" para cada dia da semana
 - Configure o intervalo de horário (ex: 08:00 - 18:00)
 - Salve as alterações
 
 Via API:
+
 ```bash
 # Listar horários configurados
 GET /api/sla/business-hours
@@ -127,11 +135,13 @@ DELETE /api/sla/business-hours/{id}
 ### 2. Configurar Feriados
 
 Via UI em `/admin/configuracoes/sla`:
+
 - Abra a seção "Feriados"
 - Clique em "Adicionar Feriado"
 - Configure data, nome e descrição
 
 Via API:
+
 ```bash
 # Listar feriados
 GET /api/sla/feriados
@@ -160,11 +170,13 @@ DELETE /api/sla/feriados/{id}
 ### 3. Configurar Níveis de SLA
 
 Via UI em `/admin/configuracoes/sla`:
+
 - Abra a seção "Níveis de SLA e Prioridades"
 - Clique em "Adicionar SLA"
 - Configure prioridade, tempo de resposta, tempo de resolução
 
 Via API:
+
 ```bash
 # Listar configurações
 GET /api/sla/config
@@ -194,6 +206,7 @@ DELETE /api/sla/config/{id}
 ## 📊 APIs de Métricas
 
 ### 1. Obter Tempo Médio de Resposta
+
 ```bash
 GET /api/sla/metrics/tempo-medio-resposta
 
@@ -205,6 +218,7 @@ Resposta:
 ```
 
 ### 2. Obter Tempo Médio de Resolução
+
 ```bash
 GET /api/sla/metrics/tempo-medio-resolucao
 
@@ -218,6 +232,7 @@ Resposta:
 ```
 
 ### 3. Obter Status de SLA de um Chamado
+
 ```bash
 GET /api/sla/chamado/{chamado_id}/status
 
@@ -242,6 +257,7 @@ Resposta:
 ```
 
 ### 4. Recalcular SLA Manualmente
+
 ```bash
 POST /api/sla/scheduler/recalcular-agora
 
@@ -256,6 +272,7 @@ Resposta:
 ```
 
 ### 5. Invalidar Cache
+
 ```bash
 # Invalidar cache de um chamado específico
 POST /api/sla/cache/invalidate-chamado/{chamado_id}
@@ -276,6 +293,7 @@ POST /api/sla/cache/cleanup
 ## 🔄 Fluxo de Operação
 
 ### Situação 1: Chamado Aberto Durante Horário Comercial
+
 ```
 2024-01-15 09:00 → Chamado aberto (segunda-feira, 09:00)
                    ✅ Começa a contar SLA
@@ -288,6 +306,7 @@ POST /api/sla/cache/cleanup
 ```
 
 ### Situação 2: Chamado Pausa em "Em Análise"
+
 ```
 2024-01-15 10:00 → Status muda para "Em análise"
                    ⏸️  Pausa contagem de SLA
@@ -297,6 +316,7 @@ POST /api/sla/cache/cleanup
 ```
 
 ### Situação 3: Recalculação Automática
+
 ```
 Diariamente às 00:00 (horário Brasil):
 1. Scheduler ativa
@@ -309,11 +329,13 @@ Diariamente às 00:00 (horário Brasil):
 ## 🧪 Testes e Validação
 
 ### Executar Validação do Sistema
+
 ```bash
 python backend/ti/scripts/validate_sla_system.py
 ```
 
 Output esperado:
+
 ```
 ✓ Tabela 'sla_configuration' existe e está acessível
 ✓ Tabela 'sla_business_hours' existe e está acessível
@@ -330,11 +352,13 @@ Output esperado:
 ```
 
 ### Executar Sincronização Inicial
+
 ```bash
 python backend/ti/scripts/sync_chamados_sla.py
 ```
 
 Output esperado:
+
 ```
 🔄 Iniciando sincronização de chamados com SLA...
 ========================================================================
@@ -353,11 +377,13 @@ Output esperado:
 ```
 
 ### Executar Recalculação Completa
+
 ```bash
 python backend/ti/scripts/recalculate_sla_complete.py
 ```
 
 Output esperado:
+
 ```
 ================================================================================
 RECALCULANDO SLA DE TODOS OS CHAMADOS
@@ -399,21 +425,27 @@ INFO: ✅ Cache aquecido com métricas principais
 ## 🐛 Troubleshooting
 
 ### Problema: SLA não está sendo calculado
+
 **Solução:**
+
 1. Verifique se há configuração de SLA para a prioridade do chamado
 2. Execute `/api/sla/validate/all` para validar configurações
 3. Verifique se horários comerciais estão configurados
 4. Chame `/api/sla/scheduler/recalcular-agora` para forçar recalculação
 
 ### Problema: Cache não está sendo atualizado
+
 **Solução:**
+
 1. Verifique logs do scheduler
 2. Limpe o cache: `POST /api/sla/cache/cleanup`
 3. Pré-aqueça o cache: `POST /api/sla/cache/warmup`
 4. Valide o sistema: `python validate_sla_system.py`
 
 ### Problema: Tempo médio de resposta está errado
+
 **Solução:**
+
 1. Verifique se `data_primeira_resposta` está preenchido nos chamados
 2. Verifique se horários comerciais incluem todos os dias necessários
 3. Verifique se feriados estão configurados corretamente
@@ -422,12 +454,13 @@ INFO: ✅ Cache aquecido com métricas principais
 ## 📚 Referência de Schemas
 
 ### SLAConfiguration
+
 ```typescript
 {
   id: number;
-  prioridade: string;  // "Crítico", "Alto", "Normal", "Baixo"
-  tempo_resposta_horas: number;  // 1.0, 2.0, 4.0, 8.0
-  tempo_resolucao_horas: number;  // 4.0, 8.0, 24.0, 48.0
+  prioridade: string; // "Crítico", "Alto", "Normal", "Baixo"
+  tempo_resposta_horas: number; // 1.0, 2.0, 4.0, 8.0
+  tempo_resolucao_horas: number; // 4.0, 8.0, 24.0, 48.0
   descricao: string | null;
   ativo: boolean;
   criado_em: datetime;
@@ -436,12 +469,13 @@ INFO: ✅ Cache aquecido com métricas principais
 ```
 
 ### SLABusinessHours
+
 ```typescript
 {
   id: number;
-  dia_semana: number;  // 0=segunda, 1=terça, ..., 6=domingo
-  hora_inicio: string;  // "08:00"
-  hora_fim: string;  // "18:00"
+  dia_semana: number; // 0=segunda, 1=terça, ..., 6=domingo
+  hora_inicio: string; // "08:00"
+  hora_fim: string; // "18:00"
   ativo: boolean;
   criado_em: datetime;
   atualizado_em: datetime;
@@ -449,11 +483,12 @@ INFO: ✅ Cache aquecido com métricas principais
 ```
 
 ### SLAFeriado
+
 ```typescript
 {
   id: number;
-  data: string;  // "2024-12-25"
-  nome: string;  // "Natal"
+  data: string; // "2024-12-25"
+  nome: string; // "Natal"
   descricao: string | null;
   ativo: boolean;
   criado_em: datetime;
@@ -474,6 +509,7 @@ INFO: ✅ Cache aquecido com métricas principais
 ## 📞 Suporte
 
 Para problemas ou dúvidas:
+
 1. Verifique os logs do scheduler
 2. Execute `validate_sla_system.py` para diagnóstico
 3. Consulte a seção Troubleshooting acima

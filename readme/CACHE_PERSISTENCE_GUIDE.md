@@ -37,6 +37,7 @@ finally:
 ```
 
 **Impacto:** Ao reiniciar a aplicação:
+
 1. Cache carrega todas as métricas do banco de dados
 2. Painel mostra dados **imediatamente** sem delay
 3. Próximas requisições são servidas do cache (muito rápido)
@@ -62,12 +63,13 @@ Já estava implementado em `backend/ti/api/chamados.py`:
 ```python
 def _sincronizar_sla(db: Session, chamado: Chamado, status_anterior: str | None = None):
     # ... cálculo de SLA ...
-    
+
     # Invalida cache quando chamado muda
     SLACacheManager.invalidate_by_chamado(db, chamado.id)
 ```
 
 **Quando o cache é invalidado:**
+
 - ✅ Novo chamado criado
 - ✅ Status do chamado muda (Aberto → Em andamento → Concluído)
 - ✅ Primeira resposta registrada
@@ -131,37 +133,39 @@ def _sincronizar_sla(db: Session, chamado: Chamado, status_anterior: str | None 
 ### Cenário: Administrador Reinicia Aplicação e Acessa Painel
 
 **Antes das otimizações:**
+
 ```
 09:00:00 → App reinicia
            Cache em memória = vazio ❌
-           
+
 09:00:05 → Admin acessa painel
            Começa a recalcular todas as métricas
-           
+
 09:00:15 → Painel finalmente carrega ⏱️ 10 segundos de espera
 ```
 
 **Depois das otimizações:**
+
 ```
 09:00:00 → App reinicia
            Cache é PRÉ-CARREGADO do banco ✅
-           
+
 09:00:01 → Admin acessa painel
            Métricas aparecem IMEDIATAMENTE ⚡
            (carregadas do cache)
-           
+
 09:00:02 → Painel totalmente funcional ✅ <1 segundo
 ```
 
 ## 🎁 Benefícios
 
-| Benefício | Antes | Depois |
-|-----------|-------|--------|
-| **Delay no Painel** | 10-15s | <1s |
-| **Cache Persistence** | 5-10 min | 24h ou até mudança |
-| **Restart Impact** | Metrics vazias | Metrics carregadas |
-| **Recalculation** | A cada 5-30 min | Apenas ao mudar status |
-| **Performance** | Frequentes recálculos | Cache hit rate alto |
+| Benefício             | Antes                 | Depois                 |
+| --------------------- | --------------------- | ---------------------- |
+| **Delay no Painel**   | 10-15s                | <1s                    |
+| **Cache Persistence** | 5-10 min              | 24h ou até mudança     |
+| **Restart Impact**    | Metrics vazias        | Metrics carregadas     |
+| **Recalculation**     | A cada 5-30 min       | Apenas ao mudar status |
+| **Performance**       | Frequentes recálculos | Cache hit rate alto    |
 
 ## 🧪 Testar a Solução
 
@@ -240,17 +244,20 @@ Se por algum motivo quiser desabilitar o pré-carregamento:
 ### Painel ainda está lento ao reiniciar
 
 1. **Verificar logs:**
+
    ```bash
    # Procure por "Cache pré-carregado"
    # Deve aparecer na startup
    ```
 
 2. **Forçar pré-carregamento manual:**
+
    ```bash
    POST /api/sla/cache/warmup
    ```
 
 3. **Limpar cache expirado:**
+
    ```bash
    POST /api/sla/cache/cleanup
    ```
