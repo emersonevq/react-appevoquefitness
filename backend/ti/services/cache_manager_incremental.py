@@ -180,25 +180,19 @@ class ChamadosTodayCounter:
                 hour=0, minute=0, second=0, microsecond=0
             )
 
-            cached = db.query(MetricsCacheDB).filter(
-                MetricsCacheDB.cache_key == cache_key
-            ).first()
-
             try:
-                if cached:
-                    cached.cache_value = json.dumps(count)
-                    cached.calculated_at = agora
-                    cached.expires_at = proximo_dia
-                    db.add(cached)
-                else:
-                    cached = MetricsCacheDB(
-                        cache_key=cache_key,
-                        cache_value=json.dumps(count),
-                        calculated_at=agora,
-                        expires_at=proximo_dia,
-                    )
-                    db.add(cached)
-
+                from sqlalchemy import insert
+                stmt = insert(MetricsCacheDB).values(
+                    cache_key=cache_key,
+                    cache_value=json.dumps(count),
+                    calculated_at=agora,
+                    expires_at=proximo_dia,
+                ).on_duplicate_key_update(
+                    cache_value=json.dumps(count),
+                    calculated_at=agora,
+                    expires_at=proximo_dia,
+                )
+                db.execute(stmt)
                 db.commit()
             except Exception as commit_error:
                 db.rollback()
