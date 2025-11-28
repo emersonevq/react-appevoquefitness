@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { apiFetch } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { X } from "lucide-react";
 
 type MediaItem = { id: number | string; url?: string; type?: string };
 
@@ -16,6 +17,9 @@ export default function AlertsConfig() {
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [imagemFile, setImagemFile] = useState<File | null>(null);
+  const [imagemPreview, setImagemPreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadMedia = async () => {
     const res = await apiFetch("/login-media");
@@ -30,6 +34,26 @@ export default function AlertsConfig() {
     setAlerts(Array.isArray(data) ? data : []);
   };
 
+  const handleImagemChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImagemFile(file);
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setImagemPreview(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const limparImagem = () => {
+    setImagemFile(null);
+    setImagemPreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   useEffect(() => {
     loadMedia();
     loadAlerts();
@@ -38,19 +62,23 @@ export default function AlertsConfig() {
   const create = async () => {
     setLoading(true);
     try {
-      const payload: any = {
-        title,
-        message,
-        severity,
-        link: link || null,
-        media_id: mediaId || null,
-        start_at: startAt || null,
-        end_at: endAt || null,
-      };
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("message", message);
+      formData.append("severity", severity);
+      if (link) formData.append("link", link);
+      if (mediaId) formData.append("media_id", String(mediaId));
+      if (startAt) formData.append("start_at", startAt);
+      if (endAt) formData.append("end_at", endAt);
+      formData.append("ativo", "true");
+
+      if (imagemFile) {
+        formData.append("imagem", imagemFile);
+      }
+
       const res = await apiFetch("/alerts", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: formData,
       });
       if (!res.ok) {
         alert("Falha ao criar alerta");
@@ -59,6 +87,7 @@ export default function AlertsConfig() {
         setMessage("");
         setLink("");
         setMediaId(null);
+        limparImagem();
         await loadAlerts();
       }
     } finally {
@@ -146,6 +175,47 @@ export default function AlertsConfig() {
             ))}
           </select>
         </div>
+        <div>
+          <div className="text-sm text-muted-foreground mb-2">
+            Imagem do alerta (opcional)
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImagemChange}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Escolher imagem
+            </Button>
+            {imagemFile && (
+              <span className="text-sm text-muted-foreground">
+                {imagemFile.name}
+              </span>
+            )}
+          </div>
+          {imagemPreview && (
+            <div className="mt-3 relative inline-block">
+              <img
+                src={imagemPreview}
+                alt="Preview"
+                className="max-w-xs max-h-40 rounded-md border"
+              />
+              <button
+                onClick={limparImagem}
+                className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 hover:opacity-80"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-2">
           <Button onClick={create} disabled={loading}>
             {loading ? "Salvando..." : "Criar alerta"}
@@ -155,23 +225,32 @@ export default function AlertsConfig() {
 
       <div>
         <h3 className="font-semibold mt-4 mb-2">Alertas existentes</h3>
-        <div className="grid gap-3">
+        <div className="grid gap-4">
           {alerts.map((a) => (
             <div
               key={a.id}
-              className="border rounded-md p-3 flex items-start justify-between"
+              className="border rounded-md p-3 flex items-start justify-between gap-3"
             >
-              <div>
+              <div className="flex-1">
                 <div className="font-semibold">{a.title || "(sem título)"}</div>
                 <div className="text-sm text-muted-foreground">{a.message}</div>
                 <div className="text-xs text-muted-foreground mt-1">
                   {a.severity} — {a.start_at || ""} → {a.end_at || ""}
                 </div>
+                {a.imagem_blob && (
+                  <div className="mt-2">
+                    <img
+                      src={`data:${a.imagem_mime_type || "image/jpeg"};base64,${a.imagem_blob}`}
+                      alt="Alerta"
+                      className="max-w-xs max-h-32 rounded-md border"
+                    />
+                  </div>
+                )}
               </div>
               <div>
                 <button
                   onClick={() => remove(a.id)}
-                  className="text-xs px-2 py-1 rounded-md bg-destructive text-destructive-foreground"
+                  className="text-xs px-2 py-1 rounded-md bg-destructive text-destructive-foreground whitespace-nowrap"
                 >
                   Remover
                 </button>

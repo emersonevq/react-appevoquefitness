@@ -1,11 +1,58 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
+from io import BytesIO
 from core.db import get_db, engine
 from ..models.alert import Alert
 from ..schemas.alert import AlertOut, AlertCreate
 
-router = APIRouter(prefix="/alerts", tags=["TI - Alerts"]) 
+router = APIRouter(prefix="/alerts", tags=["TI - Alerts"])
+
+# Auto-migration on startup
+def _ensure_alert_schema():
+    """Adiciona colunas de imagem à tabela alert se não existirem."""
+    try:
+        from sqlalchemy import inspect, text
+
+        with engine.connect() as conn:
+            inspector = inspect(engine)
+            tables = inspector.get_table_names()
+
+            if 'alert' not in tables:
+                print("[ALERTS] Tabela 'alert' não existe ainda")
+                return
+
+            columns = {col['name'] for col in inspector.get_columns('alert')}
+
+            if 'imagem_blob' not in columns:
+                print("[ALERTS] Adicionando coluna 'imagem_blob' à tabela alert")
+                try:
+                    conn.execute(text(
+                        "ALTER TABLE alert ADD COLUMN imagem_blob LONGBLOB NULL"
+                    ))
+                    conn.commit()
+                    print("[ALERTS] Coluna 'imagem_blob' adicionada")
+                except Exception as e:
+                    print(f"[ALERTS] Erro ao adicionar 'imagem_blob': {e}")
+                    conn.rollback()
+
+            if 'imagem_mime_type' not in columns:
+                print("[ALERTS] Adicionando coluna 'imagem_mime_type' à tabela alert")
+                try:
+                    conn.execute(text(
+                        "ALTER TABLE alert ADD COLUMN imagem_mime_type VARCHAR(100) NULL"
+                    ))
+                    conn.commit()
+                    print("[ALERTS] Coluna 'imagem_mime_type' adicionada")
+                except Exception as e:
+                    print(f"[ALERTS] Erro ao adicionar 'imagem_mime_type': {e}")
+                    conn.rollback()
+    except Exception as e:
+        print(f"[ALERTS] Erro ao fazer auto-migration: {e}")
+
+# Executar migration na primeira importação
+_ensure_alert_schema() 
 
 @router.get("", response_model=List[AlertOut])
 def list_alerts(db: Session = Depends(get_db)):
@@ -20,24 +67,91 @@ def list_alerts(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Erro ao listar alertas: {e}")
 
 @router.post("", response_model=AlertOut)
-def create_alert(payload: AlertCreate, db: Session = Depends(get_db)):
+async def create_alert(
+    title: Optional[str] = Form(None),
+    message: Optional[str] = Form(None),
+    severity: str = Form("info"),
+    link: Optional[str] = Form(None),
+    media_id: Optional[int] = Form(None),
+    start_at: Optional[str] = Form(None),
+    end_at: Optional[str] = Form(None),
+    ativo: bool = Form(True),
+    imagem: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db)
+):
     try:
+        import traceback
+        from datetime import datetime as dt
+
+        print(f"[ALERTS] Criando alerta: title={title}, severity={severity}")
+
+        imagem_blob = None
+        imagem_mime_type = None
+
+        if imagem:
+            try:
+                imagem_blob = await imagem.read()
+                imagem_mime_type = imagem.content_type
+                print(f"[ALERTS] Imagem recebida: {imagem.filename}, tamanho={len(imagem_blob)} bytes, mime={imagem_mime_type}")
+            except Exception as e:
+                print(f"[ALERTS] Erro ao processar imagem: {e}")
+
+        start_at_dt = None
+        end_at_dt = None
+
+        if start_at:
+            try:
+                start_at_dt = dt.fromisoformat(start_at.replace('Z', '+00:00'))
+            except:
+                pass
+
+        if end_at:
+            try:
+                end_at_dt = dt.fromisoformat(end_at.replace('Z', '+00:00'))
+            except:
+                pass
+
         a = Alert(
-            title=payload.title,
-            message=payload.message,
-            severity=payload.severity,
-            start_at=payload.start_at,
-            end_at=payload.end_at,
-            link=payload.link,
-            media_id=payload.media_id,
-            ativo=payload.ativo,
+            title=title,
+            message=message,
+            severity=severity,
+            start_at=start_at_dt,
+            end_at=end_at_dt,
+            link=link,
+            media_id=media_id,
+            imagem_blob=imagem_blob,
+            imagem_mime_type=imagem_mime_type,
+            ativo=ativo if ativo is not None else True,
         )
+        print(f"[ALERTS] Objeto Alert criado")
         db.add(a)
         db.commit()
         db.refresh(a)
+        print(f"[ALERTS] Alerta salvo com ID: {a.id}")
         return a
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro ao criar alerta: {e}")
+        import traceback
+        print(f"[ALERTS] ERRO ao criar alerta: {str(e)}")
+        print(f"[ALERTS] Traceback completo:\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Erro ao criar alerta: {str(e)}")
+
+@router.get("/{alert_id}/imagem")
+def get_alert_image(alert_id: int, db: Session = Depends(get_db)):
+    try:
+        a = db.query(Alert).filter(Alert.id == int(alert_id)).first()
+        if not a or not a.imagem_blob:
+            raise HTTPException(status_code=404, detail="Imagem não encontrada")
+
+        mime_type = a.imagem_mime_type or "image/jpeg"
+        return StreamingResponse(
+            BytesIO(a.imagem_blob),
+            media_type=mime_type,
+            headers={"Content-Disposition": f"inline; filename=alerta_{alert_id}"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao baixar imagem: {e}")
 
 @router.delete("/{alert_id}")
 def delete_alert(alert_id: int, db: Session = Depends(get_db)):
