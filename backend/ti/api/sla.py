@@ -649,6 +649,32 @@ def recalcular_sla_p90(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Erro ao recalcular SLA com P90: {e}")
 
 
+@router.post("/recalcular/p90-incremental")
+def recalcular_sla_p90_incremental(db: Session = Depends(get_db)):
+    """
+    Recalcula SLA baseado em P90 de forma INCREMENTAL.
+
+    Lógica:
+    1. Carrega do cache os tempos já processados
+    2. Busca APENAS chamados posteriores ao último processado
+    3. Combina dados anteriores + novos
+    4. Recalcula P90 usando a lista completa
+    5. Armazena novamente no cache
+
+    Muito mais eficiente que recalcular tudo do zero!
+    """
+    try:
+        from ti.services.sla_p90_incremental import SLAP90Incremental
+
+        resultado = SLAP90Incremental.recalcular_incremental(db)
+
+        return resultado
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erro ao recalcular SLA com P90 incremental: {e}")
+
+
 @router.get("/validate/config/{config_id}")
 def validar_configuracao(config_id: int, db: Session = Depends(get_db)):
     """
