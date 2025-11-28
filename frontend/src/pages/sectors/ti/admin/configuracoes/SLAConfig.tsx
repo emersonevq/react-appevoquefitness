@@ -389,6 +389,29 @@ export function SLA() {
     },
   });
 
+  const zerarCacheMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post("/sla/cache/reset-all");
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sla-config"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-basic"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-sla"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-daily"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-weekly"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-performance"] });
+      toast.success(
+        "Cache de SLA resetado com sucesso! Contagem recomeçará do zero.",
+      );
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.detail || "Erro ao resetar cache de SLA",
+      );
+    },
+  });
+
   const handleAddConfig = () => {
     setEditingConfig(null);
     setFormData({
@@ -531,7 +554,7 @@ export function SLA() {
       <div className="space-y-4">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <h2 className="text-lg font-semibold">Níveis de SLA e Prioridades</h2>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
             <div className="flex gap-1 bg-muted rounded-lg p-1">
               <Button
                 type="button"
@@ -563,6 +586,16 @@ export function SLA() {
             >
               <RefreshCw className="w-4 h-4" />
               Sincronizar
+            </Button>
+            <Button
+              onClick={() => zerarCacheMutation.mutate()}
+              disabled={zerarCacheMutation.isPending}
+              variant="destructive"
+              size="sm"
+              className="gap-2 h-8"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Zerar SLA
             </Button>
             <Dialog open={showConfigDialog} onOpenChange={setShowConfigDialog}>
               <DialogTrigger asChild>

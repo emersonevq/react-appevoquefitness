@@ -602,6 +602,79 @@ def limpar_cache_expirado(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Erro ao limpar cache: {e}")
 
 
+@router.post("/cache/reset-all")
+def resetar_todo_cache(db: Session = Depends(get_db)):
+    """
+    Reseta COMPLETAMENTE o cache de métricas e SLA.
+    Deve ser usado apenas após limpar configurações de SLA.
+    """
+    try:
+        from ti.models.metrics_cache import MetricsCacheDB
+
+        db.query(MetricsCacheDB).delete()
+        db.commit()
+
+        SLACacheManager.invalidate_all_sla(db)
+
+        return {
+            "ok": True,
+            "message": "Cache de métricas e SLA foi completamente resetado"
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Erro ao resetar cache: {e}")
+
+
+@router.post("/recalcular/p90")
+def recalcular_sla_p90(db: Session = Depends(get_db)):
+    """
+    Recalcula SLA baseado em P90 (90º percentil) dos últimos 30 dias.
+
+    Lógica:
+    1. Busca todos os chamados fechados (concluído/cancelado) dos últimos 30 dias
+    2. Calcula tempo de resposta (primeira mudança de status) descontando "Em análise"
+    3. Calcula tempo de resolução (até concluído/cancelado)
+    4. Calcula P90 para ambos
+    5. Atualiza configurações de SLA com os novos tempos
+    """
+    try:
+        from ti.services.sla_p90_calculator import SLAP90Calculator
+
+        resultado = SLAP90Calculator.recalcular_sla_por_prioridade(db)
+
+        return resultado
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erro ao recalcular SLA com P90: {e}")
+
+
+@router.post("/recalcular/p90-incremental")
+def recalcular_sla_p90_incremental(db: Session = Depends(get_db)):
+    """
+    Recalcula SLA baseado em P90 de forma INCREMENTAL.
+
+    Lógica:
+    1. Carrega do cache os tempos já processados
+    2. Busca APENAS chamados posteriores ao último processado
+    3. Combina dados anteriores + novos
+    4. Recalcula P90 usando a lista completa
+    5. Armazena novamente no cache
+
+    Muito mais eficiente que recalcular tudo do zero!
+    """
+    try:
+        from ti.services.sla_p90_incremental import SLAP90Incremental
+
+        resultado = SLAP90Incremental.recalcular_incremental(db)
+
+        return resultado
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erro ao recalcular SLA com P90 incremental: {e}")
+
+
 @router.get("/validate/config/{config_id}")
 def validar_configuracao(config_id: int, db: Session = Depends(get_db)):
     """

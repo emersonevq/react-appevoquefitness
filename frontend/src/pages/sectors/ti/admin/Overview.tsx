@@ -7,10 +7,13 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Loader,
+  RefreshCw,
 } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useSLACacheManager } from "@/hooks/useSLACacheManager";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   Bar,
   BarChart,
@@ -218,6 +221,30 @@ export default function Overview() {
     }
   }, [slaMetricsData]);
 
+  const atualizarMetricasMutation = useMutation({
+    mutationFn: async () => {
+      const response = await api.post("/sla/recalcular/p90-incremental");
+      return response.data;
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["metrics-basic"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-sla"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-daily"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-weekly"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics-performance"] });
+
+      const prioridades = Object.keys(data.prioridades || {});
+      toast.success(
+        `Métricas atualizadas! ${prioridades.length} prioridades recalculadas.`,
+      );
+    },
+    onError: (error: any) => {
+      toast.error(
+        error.response?.data?.detail || "Erro ao atualizar métricas de SLA",
+      );
+    },
+  });
+
   // Pré-aquece cache na primeira carga
   useEffect(() => {
     const preWarmCache = async () => {
@@ -250,6 +277,22 @@ export default function Overview() {
   if (isLoading) {
     return (
       <div className="space-y-6">
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Visão Geral</h1>
+          <Button
+            onClick={() => atualizarMetricasMutation.mutate()}
+            disabled={atualizarMetricasMutation.isPending}
+            size="sm"
+            className="gap-2"
+          >
+            <RefreshCw
+              className={`w-4 h-4 ${atualizarMetricasMutation.isPending ? "animate-spin" : ""}`}
+            />
+            {atualizarMetricasMutation.isPending
+              ? "Atualizando..."
+              : "Atualizar Métricas"}
+          </Button>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[1, 2, 3, 4].map((i) => (
             <div
@@ -273,6 +316,23 @@ export default function Overview() {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Visão Geral</h1>
+        <Button
+          onClick={() => atualizarMetricasMutation.mutate()}
+          disabled={atualizarMetricasMutation.isPending}
+          size="sm"
+          className="gap-2"
+        >
+          <RefreshCw
+            className={`w-4 h-4 ${atualizarMetricasMutation.isPending ? "animate-spin" : ""}`}
+          />
+          {atualizarMetricasMutation.isPending
+            ? "Atualizando..."
+            : "Atualizar Métricas"}
+        </Button>
+      </div>
+
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Metric
