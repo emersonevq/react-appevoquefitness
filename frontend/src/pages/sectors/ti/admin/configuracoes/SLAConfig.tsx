@@ -332,8 +332,14 @@ export function SLA() {
   });
 
   const updateFeriadoMutation = useMutation({
-    mutationFn: async (data: { id: number; updates: Omit<typeof feriadoData, 'data'> }) => {
-      const response = await api.patch(`/sla/feriados/${data.id}`, data.updates);
+    mutationFn: async (data: {
+      id: number;
+      updates: Omit<typeof feriadoData, "data">;
+    }) => {
+      const response = await api.patch(
+        `/sla/feriados/${data.id}`,
+        data.updates,
+      );
       return response.data;
     },
     onSuccess: () => {
@@ -872,7 +878,11 @@ export function SLA() {
           <h2 className="text-lg font-semibold">Feriados</h2>
           <Dialog open={showHolidayDialog} onOpenChange={setShowHolidayDialog}>
             <DialogTrigger asChild>
-              <Button onClick={handleAddFeriado} size="sm" className="gap-2 h-8">
+              <Button
+                onClick={handleAddFeriado}
+                size="sm"
+                className="gap-2 h-8"
+              >
                 <Plus className="w-4 h-4" />
                 Adicionar Feriado
               </Button>
@@ -880,9 +890,7 @@ export function SLA() {
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>
-                  {editingFeriado
-                    ? "Editar Feriado"
-                    : "Adicionar Feriado"}
+                  {editingFeriado ? "Editar Feriado" : "Adicionar Feriado"}
                 </DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
@@ -960,9 +968,9 @@ export function SLA() {
                         <h3 className="font-medium text-sm">{feriado.nome}</h3>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs text-muted-foreground">
-                            {new Date(feriado.data + "T00:00:00").toLocaleDateString(
-                              "pt-BR"
-                            )}
+                            {new Date(
+                              feriado.data + "T00:00:00",
+                            ).toLocaleDateString("pt-BR")}
                           </span>
                           {feriado.descricao && (
                             <span className="text-xs text-muted-foreground">
@@ -984,9 +992,7 @@ export function SLA() {
                       <Button
                         size="sm"
                         variant="destructive"
-                        onClick={() =>
-                          deleteFeriadoMutation.mutate(feriado.id)
-                        }
+                        onClick={() => deleteFeriadoMutation.mutate(feriado.id)}
                         className="h-8 px-3"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
