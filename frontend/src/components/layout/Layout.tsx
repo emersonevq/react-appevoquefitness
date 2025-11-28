@@ -17,6 +17,7 @@ import { ChevronDown, Menu, LogOut } from "lucide-react";
 import { useAuthContext } from "@/lib/auth-context";
 import { Link, NavLink, useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
+import AlertDisplay from "@/components/alerts/AlertDisplay";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuthContext();
@@ -123,6 +124,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     <div
       className={`min-h-[100svh] md:min-h-screen w-full flex flex-col ${hideHeaderForBi ? "bi-fullscreen" : ""}`}
     >
+      {/* Alertas do Sistema */}
+      <AlertDisplay />
+
       {/* Permission update notification */}
       {permissionsUpdated && (
         <div className="fixed top-4 right-4 z-50 bg-green-50 border border-green-300 rounded-lg px-4 py-3 text-sm text-green-800 shadow-md animate-in fade-in slide-in-from-right-2 duration-300">

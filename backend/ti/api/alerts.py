@@ -5,6 +5,7 @@ from typing import List, Optional, Dict, Any
 from io import BytesIO
 from datetime import datetime
 import base64
+import json
 from core.db import get_db, engine
 
 # Imports com tratamento de erro
@@ -46,6 +47,11 @@ def list_alerts(db: Session = Depends(get_db)) -> List[Dict[str, Any]]:
                 "message": alert.message if alert.message else "",
                 "description": alert.description if alert.description else "",
                 "severity": alert.severity if alert.severity else "low",
+                "pages": alert.pages,
+                "show_on_home": alert.show_on_home,
+                "created_by": alert.created_by,
+                "ativo": alert.ativo,
+                "usuarios_visualizaram": alert.usuarios_visualizaram,
                 "created_at": alert.created_at.isoformat() if alert.created_at else None,
                 "updated_at": alert.updated_at.isoformat() if alert.updated_at else None,
                 "imagem_mime_type": alert.imagem_mime_type,
@@ -83,6 +89,9 @@ async def create_alert(
     message: str = Form(...),
     description: Optional[str] = Form(None),
     severity: str = Form("low"),
+    pages: Optional[str] = Form(None),
+    show_on_home: Optional[bool] = Form(False),
+    created_by: Optional[str] = Form(None),
     imagem: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
@@ -90,14 +99,25 @@ async def create_alert(
     Cria um novo alerta no sistema
     """
     try:
+        import json
         print(f"[ALERTS] Iniciando criação de alerta...")
-        print(f"[ALERTS] Dados recebidos: title={title}, message={message}, severity={severity}, description={description}")
+        print(f"[ALERTS] Dados recebidos: title={title}, message={message}, severity={severity}, description={description}, pages={pages}, show_on_home={show_on_home}, created_by={created_by}")
 
         # Validar severity
         valid_severities = ["low", "medium", "high", "critical"]
         if severity not in valid_severities:
             print(f"[ALERTS] Severity '{severity}' inválido, usando 'low'")
             severity = "low"
+
+        # Processar páginas (JSON string para lista)
+        pages_list = None
+        if pages:
+            try:
+                pages_list = json.loads(pages) if isinstance(pages, str) else pages
+                print(f"[ALERTS] Páginas processadas: {pages_list}")
+            except Exception as e:
+                print(f"[ALERTS] Erro ao processar páginas JSON: {e}")
+                pages_list = None
 
         # Processar imagem se fornecida
         imagem_blob = None
@@ -115,32 +135,21 @@ async def create_alert(
                 imagem_blob = None
                 imagem_mime_type = None
 
-        # Verificar campos disponíveis no modelo Alert
+        # Criar alerta com todos os campos
         print(f"[ALERTS] Criando objeto Alert...")
-        
-        try:
-            # Tentar criar com todos os campos
-            new_alert = Alert(
-                title=title,
-                message=message,
-                description=description,
-                severity=severity,
-                imagem_blob=imagem_blob,
-                imagem_mime_type=imagem_mime_type
-            )
-        except TypeError as e:
-            # Se falhar, tentar sem description
-            print(f"[ALERTS] Erro ao criar Alert com description, tentando sem: {e}")
-            new_alert = Alert(
-                title=title,
-                message=message,
-                severity=severity,
-                imagem_blob=imagem_blob,
-                imagem_mime_type=imagem_mime_type
-            )
-            # Tentar adicionar description depois se o campo existir
-            if hasattr(new_alert, 'description'):
-                new_alert.description = description
+
+        new_alert = Alert(
+            title=title,
+            message=message,
+            description=description,
+            severity=severity,
+            pages=pages_list,
+            show_on_home=show_on_home,
+            created_by=created_by,
+            ativo=True,
+            imagem_blob=imagem_blob,
+            imagem_mime_type=imagem_mime_type
+        )
         
         print(f"[ALERTS] Salvando no banco de dados...")
         db.add(new_alert)
@@ -154,17 +163,17 @@ async def create_alert(
             "id": new_alert.id,
             "title": new_alert.title,
             "message": new_alert.message,
+            "description": new_alert.description,
             "severity": new_alert.severity,
+            "pages": new_alert.pages,
+            "show_on_home": new_alert.show_on_home,
+            "created_by": new_alert.created_by,
+            "ativo": new_alert.ativo,
+            "usuarios_visualizaram": new_alert.usuarios_visualizaram,
+            "created_at": new_alert.created_at.isoformat() if new_alert.created_at else None,
+            "updated_at": new_alert.updated_at.isoformat() if new_alert.updated_at else None,
             "imagem_mime_type": new_alert.imagem_mime_type
         }
-        
-        # Adicionar campos opcionais se existirem
-        if hasattr(new_alert, 'description'):
-            response["description"] = new_alert.description
-        if hasattr(new_alert, 'created_at'):
-            response["created_at"] = new_alert.created_at.isoformat() if new_alert.created_at else None
-        if hasattr(new_alert, 'updated_at'):
-            response["updated_at"] = new_alert.updated_at.isoformat() if new_alert.updated_at else None
         
         # Converter blob para base64 para resposta
         if new_alert.imagem_blob:
@@ -257,6 +266,52 @@ def delete_alert(alert_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=f"Erro ao remover alerta: {str(e)}")
 
 
+@router.post("/{alert_id}/visualizar")
+def mark_alert_viewed(alert_id: int, usuario_id: Optional[str] = None, db: Session = Depends(get_db)):
+    """
+    Marca um alerta como visualizado por um usuário
+    """
+    try:
+        alert = db.query(Alert).filter(Alert.id == alert_id).first()
+
+        if not alert:
+            raise HTTPException(status_code=404, detail="Alerta não encontrado")
+
+        if not usuario_id:
+            usuario_id = "anonymous"
+
+        # Carregar array de usuários que visualizaram
+        usuarios_visualizaram = alert.usuarios_visualizaram
+        if not usuarios_visualizaram:
+            usuarios_visualizaram = []
+        else:
+            # Se for JSON, parsear
+            if isinstance(usuarios_visualizaram, str):
+                try:
+                    usuarios_visualizaram = json.loads(usuarios_visualizaram)
+                except:
+                    usuarios_visualizaram = []
+
+        # Adicionar usuario_id se não estiver na lista
+        if usuario_id not in usuarios_visualizaram:
+            usuarios_visualizaram.append(usuario_id)
+            alert.usuarios_visualizaram = usuarios_visualizaram
+            db.commit()
+            db.refresh(alert)
+            print(f"[ALERTS] Alerta {alert_id} marcado como visualizado por {usuario_id}")
+
+        return {"ok": True, "message": "Alerta marcado como visualizado"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"[ALERTS] Erro ao marcar alerta como visualizado: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erro ao marcar alerta: {str(e)}")
+
+
 @router.get("/debug/test")
 def debug_test(db: Session = Depends(get_db)):
     """
@@ -279,8 +334,9 @@ def debug_test(db: Session = Depends(get_db)):
             "model_columns": columns,
             "total_alerts": count,
             "expected_columns": [
-                "id", "title", "message", "description", 
-                "severity", "created_at", "updated_at", 
+                "id", "title", "message", "description",
+                "severity", "pages", "show_on_home", "created_by", "ativo",
+                "created_at", "updated_at",
                 "imagem_blob", "imagem_mime_type"
             ]
         }

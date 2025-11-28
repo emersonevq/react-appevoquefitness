@@ -120,7 +120,9 @@ export default function AlertsConfig() {
       const formData = new FormData();
       formData.append("title", title);
       formData.append("message", message);
+      formData.append("description", description);
       formData.append("severity", severity);
+      formData.append("show_on_home", String(selectedPages.includes("home")));
 
       // Enviar páginas como JSON string
       if (selectedPages.length > 0) {
@@ -271,6 +273,101 @@ export default function AlertsConfig() {
                 );
               })}
             </div>
+          </div>
+
+          {/* Descrição (opcional) */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-muted-foreground">
+              Descrição (opcional)
+            </label>
+            <textarea
+              placeholder="Ex: Informações adicionais sobre o alerta..."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full min-h-[80px] px-3 py-2 rounded-md border bg-background text-base resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+          </div>
+
+          {/* Seleção de Páginas */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium flex items-center gap-2">
+              <Monitor className="w-4 h-4" />
+              Exibir em que páginas?
+            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto p-3 border rounded-lg bg-muted/20">
+              {Object.entries(groupPagesByCategory()).map(
+                ([category, pages]) => (
+                  <div key={category} className="space-y-2">
+                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      {category}
+                    </h4>
+                    <div className="space-y-2 pl-2 border-l-2 border-muted-foreground/20">
+                      {pages.map((page) => (
+                        <label
+                          key={page.id}
+                          className="flex items-center gap-3 p-2 rounded-md hover:bg-accent transition-colors cursor-pointer group"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedPages.includes(page.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedPages([...selectedPages, page.id]);
+                              } else {
+                                setSelectedPages(
+                                  selectedPages.filter((p) => p !== page.id),
+                                );
+                              }
+                            }}
+                            className="w-4 h-4 rounded border-muted-foreground/30 accent-primary"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium group-hover:text-foreground text-muted-foreground">
+                              {page.label}
+                            </p>
+                            <p className="text-xs text-muted-foreground/60">
+                              {page.path}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+            {selectedPages.length > 0 && (
+              <div className="p-3 bg-primary/10 rounded-lg border border-primary/20">
+                <p className="text-sm font-medium text-primary">
+                  {selectedPages.length}{" "}
+                  {selectedPages.length === 1 ? "página" : "páginas"}{" "}
+                  selecionada
+                  {selectedPages.length !== 1 ? "s" : ""}
+                </p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {selectedPages.map((pageId) => {
+                    const page =
+                      ALERT_PAGES[pageId as keyof typeof ALERT_PAGES];
+                    return page ? (
+                      <Badge key={pageId} variant="secondary">
+                        {page.label}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedPages(
+                              selectedPages.filter((p) => p !== pageId),
+                            )
+                          }
+                          className="ml-2 hover:opacity-70"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    ) : null;
+                  })}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Upload de Imagem */}
@@ -440,15 +537,51 @@ export default function AlertsConfig() {
                           </div>
                         )}
 
+                        {/* Páginas onde é exibido */}
+                        {alert.pages && alert.pages.length > 0 && (
+                          <div className="pt-2 border-t">
+                            <p className="text-xs font-medium text-muted-foreground mb-2">
+                              Exibido em:
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {alert.pages.map((pageId: string) => {
+                                const page =
+                                  ALERT_PAGES[
+                                    pageId as keyof typeof ALERT_PAGES
+                                  ];
+                                return page ? (
+                                  <Badge key={pageId} variant="outline">
+                                    {page.label}
+                                  </Badge>
+                                ) : null;
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Usuários que visualizaram */}
+                        {alert.usuarios_visualizaram &&
+                          alert.usuarios_visualizaram.length > 0 && (
+                            <div className="pt-2 border-t">
+                              <p className="text-xs font-medium text-muted-foreground">
+                                Visualizado por{" "}
+                                {alert.usuarios_visualizaram.length}{" "}
+                                {alert.usuarios_visualizaram.length === 1
+                                  ? "usuário"
+                                  : "usuários"}
+                              </p>
+                            </div>
+                          )}
+
                         {/* Footer */}
                         <div className="flex items-center gap-3 pt-2 border-t">
                           <Badge variant="outline" className={config.badge}>
                             {config.label}
                           </Badge>
-                          {alert.criado_em && (
+                          {alert.created_at && (
                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
                               <Calendar className="w-3 h-3" />
-                              {new Date(alert.criado_em).toLocaleDateString(
+                              {new Date(alert.created_at).toLocaleDateString(
                                 "pt-BR",
                                 {
                                   day: "2-digit",

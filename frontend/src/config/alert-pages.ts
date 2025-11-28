@@ -141,6 +141,20 @@ export const ALERT_PAGES = {
     path: "/setor/ti/admin/configuracoes",
     category: "Admin TI",
   },
+  tiAdminAlertas: {
+    id: "tiAdminAlertas",
+    label: "Alertas",
+    path: "/setor/ti/admin/configuracoes/alertas",
+    category: "Admin TI",
+  },
+
+  // Páginas adicionais de setores
+  notFound: {
+    id: "notFound",
+    label: "Página não encontrada",
+    path: "/404",
+    category: "Erros",
+  },
 } as const;
 
 export type AlertPageId = keyof typeof ALERT_PAGES;
@@ -183,15 +197,13 @@ export const shouldShowAlertOnPage = (
     // Comparação exata de caminho
     if (currentPath === page.path) return true;
 
-    // Comparação com rota dinâmica (ex: /setor/:slug)
-    const pathParts = currentPath.split("/");
-    const pageParts = page.path.split("/");
-
-    if (pathParts.length === pageParts.length) {
-      return pathParts.every(
-        (part, idx) =>
-          pageParts[idx] === part || pageParts[idx]?.startsWith(":"),
-      );
+    // Verificar se a página atual começa com o caminho configurado
+    // Ex: /setor/ti/admin/chamados contém /setor/ti
+    if (
+      currentPath.startsWith(page.path + "/") ||
+      currentPath.startsWith(page.path)
+    ) {
+      return true;
     }
 
     return false;
