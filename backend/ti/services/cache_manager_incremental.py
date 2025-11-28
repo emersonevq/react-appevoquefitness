@@ -401,31 +401,25 @@ class IncrementalMetricsCache:
     def _save_metrics(db: Session, metricas: Dict[str, Any]) -> None:
         """Salva métricas no cache com expiração até fim do mês"""
         try:
+            from sqlalchemy import insert
             cache_key = IncrementalMetricsCache.get_cache_key_month()
             expire_time = IncrementalMetricsCache.get_expire_time_for_month()
-            
-            cached = db.query(MetricsCacheDB).filter(
-                MetricsCacheDB.cache_key == cache_key
-            ).first()
-            
+
             agora = now_brazil_naive()
             cache_value = json.dumps(metricas)
 
             try:
-                if cached:
-                    cached.cache_value = cache_value
-                    cached.calculated_at = agora
-                    cached.expires_at = expire_time
-                    db.add(cached)
-                else:
-                    cached = MetricsCacheDB(
-                        cache_key=cache_key,
-                        cache_value=cache_value,
-                        calculated_at=agora,
-                        expires_at=expire_time,
-                    )
-                    db.add(cached)
-
+                stmt = insert(MetricsCacheDB).values(
+                    cache_key=cache_key,
+                    cache_value=cache_value,
+                    calculated_at=agora,
+                    expires_at=expire_time,
+                ).on_duplicate_key_update(
+                    cache_value=cache_value,
+                    calculated_at=agora,
+                    expires_at=expire_time,
+                )
+                db.execute(stmt)
                 db.commit()
             except Exception as commit_error:
                 db.rollback()
