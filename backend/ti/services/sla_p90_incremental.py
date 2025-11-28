@@ -212,8 +212,9 @@ class SLAP90Incremental:
     def recalcular_incremental(db: Session) -> dict:
         """
         Recalcula SLA de forma INCREMENTAL.
-        
+
         Busca apenas chamados posteriores ao último processado.
+        Ignora chamados anteriores ao último reset (se houver).
         Combina com dados anteriores para calcular P90.
         """
         agora = now_brazil_naive()
@@ -243,8 +244,18 @@ class SLAP90Incremental:
             print(f"  - Total anterior em cache: {cache_anterior['total_anterior']}")
             print(f"  - Último ID processado: {ultimo_id}")
 
+            if config.ultimo_reset_em:
+                print(f"  - Último reset em: {config.ultimo_reset_em.isoformat()}")
+
             tempos_resposta = cache_anterior["tempos_resposta"].copy()
             tempos_resolucao = cache_anterior["tempos_resolucao"].copy()
+
+            # Se houver reset, ignora dados anteriores e começa do zero
+            if config.ultimo_reset_em:
+                print(f"  - Sistema foi resetado! Iniciando cálculos do zero a partir de {config.ultimo_reset_em}")
+                tempos_resposta = []
+                tempos_resolucao = []
+                ultimo_id = 0
 
             chamados_novos = db.query(Chamado).filter(
                 and_(
@@ -253,7 +264,9 @@ class SLAP90Incremental:
                     Chamado.data_abertura <= agora,
                     Chamado.deletado_em.is_(None),
                     Chamado.status.in_(["Concluído", "Cancelado"]),
-                    Chamado.id > ultimo_id
+                    Chamado.id > ultimo_id,
+                    # Se houver reset, apenas chamados APÓS o reset
+                    Chamado.data_abertura >= (config.ultimo_reset_em if config.ultimo_reset_em else data_inicio)
                 )
             ).order_by(Chamado.id.asc()).all()
 
