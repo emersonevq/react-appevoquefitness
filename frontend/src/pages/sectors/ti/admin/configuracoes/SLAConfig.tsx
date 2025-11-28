@@ -182,6 +182,14 @@ export function SLA() {
     },
   });
 
+  const { data: holidays = [], isLoading: holidaysLoading } = useQuery({
+    queryKey: ["sla-holidays"],
+    queryFn: async () => {
+      const response = await api.get("/sla/holidays");
+      return response.data;
+    },
+  });
+
   const createConfigMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const response = await api.post("/sla/config", data);
