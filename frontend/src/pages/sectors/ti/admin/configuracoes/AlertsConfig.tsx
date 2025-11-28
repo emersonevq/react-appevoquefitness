@@ -13,6 +13,7 @@ import {
   Trash2,
   Plus,
   Sparkles,
+  Monitor,
 } from "lucide-react";
 import {
   Card,
@@ -22,6 +23,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ALERT_PAGES, groupPagesByCategory } from "@/config/alert-pages";
 
 type MediaItem = { id: number | string; url?: string; type?: string };
 
@@ -65,6 +67,7 @@ export default function AlertsConfig() {
   const [message, setMessage] = useState("");
   const [description, setDescription] = useState("");
   const [severity, setSeverity] = useState<keyof typeof severityConfig>("low");
+  const [selectedPages, setSelectedPages] = useState<string[]>([]);
   const [mediaList, setMediaList] = useState<MediaItem[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -119,6 +122,13 @@ export default function AlertsConfig() {
       formData.append("message", message);
       formData.append("severity", severity);
 
+      // Enviar páginas como JSON string
+      if (selectedPages.length > 0) {
+        formData.append("pages", JSON.stringify(selectedPages));
+      } else {
+        formData.append("pages", JSON.stringify([]));
+      }
+
       if (imagemFile) {
         formData.append("imagem", imagemFile);
       }
@@ -137,6 +147,7 @@ export default function AlertsConfig() {
         setMessage("");
         setDescription("");
         setSeverity("low");
+        setSelectedPages([]);
         limparImagem();
         await loadAlerts();
       }
