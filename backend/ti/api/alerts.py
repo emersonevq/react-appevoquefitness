@@ -322,6 +322,59 @@ def mark_alert_viewed(alert_id: int, usuario_id: Optional[str] = None, usuario_e
         raise HTTPException(status_code=500, detail=f"Erro ao marcar alerta: {str(e)}")
 
 
+@router.get("/{alert_id}/viewers")
+def get_alert_viewers(alert_id: int, db: Session = Depends(get_db)):
+    """
+    Retorna a lista de usuários que visualizaram um alerta com timestamps
+    """
+    try:
+        alert = db.query(Alert).filter(Alert.id == alert_id).first()
+
+        if not alert:
+            raise HTTPException(status_code=404, detail="Alerta não encontrado")
+
+        usuarios_visualizaram = alert.usuarios_visualizaram
+        if not usuarios_visualizaram:
+            return {"viewers": []}
+
+        # Parsear se for string JSON
+        if isinstance(usuarios_visualizaram, str):
+            try:
+                usuarios_visualizaram = json.loads(usuarios_visualizaram)
+            except:
+                usuarios_visualizaram = []
+
+        # Converter para lista de dicts ordenada por data
+        viewers = []
+        for user in usuarios_visualizaram:
+            if isinstance(user, dict):
+                viewers.append(user)
+            else:
+                # Legacy format: just a string ID
+                viewers.append({
+                    "id": user,
+                    "email": user,
+                    "nome": user,
+                    "visualizado_em": None
+                })
+
+        # Ordenar por data de visualização (mais recentes primeiro)
+        viewers.sort(
+            key=lambda x: x.get("visualizado_em") or "",
+            reverse=True
+        )
+
+        return {"viewers": viewers}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ALERTS] Erro ao buscar viewers do alerta {alert_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar viewers: {str(e)}")
+
+
 @router.get("/debug/test")
 def debug_test(db: Session = Depends(get_db)):
     """
@@ -329,16 +382,16 @@ def debug_test(db: Session = Depends(get_db)):
     """
     try:
         from sqlalchemy import inspect
-        
+
         # Inspecionar o modelo
         inspector = inspect(Alert)
         columns = {}
         for col in inspector.columns:
             columns[col.key] = str(col.type)
-        
+
         # Tentar fazer uma query simples
         count = db.query(Alert).count()
-        
+
         return {
             "status": "ok",
             "model_columns": columns,
