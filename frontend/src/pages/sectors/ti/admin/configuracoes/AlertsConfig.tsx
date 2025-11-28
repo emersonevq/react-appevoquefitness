@@ -623,6 +623,16 @@ export default function AlertsConfig() {
           </div>
         )}
       </div>
+
+      {/* Viewers Modal */}
+      {selectedAlertForViewers && (
+        <AlertViewersModal
+          alertId={selectedAlertForViewers.id}
+          alertTitle={selectedAlertForViewers.title}
+          open={viewersModalOpen}
+          onOpenChange={setViewersModalOpen}
+        />
+      )}
     </div>
   );
 }
