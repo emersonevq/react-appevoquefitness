@@ -462,6 +462,52 @@ export function SLA() {
     }
   };
 
+  const handleAddHoliday = () => {
+    setEditingHoliday(null);
+    setHolidayData({
+      data: new Date().toISOString().split("T")[0],
+      nome: "",
+      descricao: "",
+    });
+    setShowHolidayDialog(true);
+  };
+
+  const handleEditHoliday = (holiday: Holiday) => {
+    setEditingHoliday(holiday);
+    setHolidayData({
+      data: holiday.data,
+      nome: holiday.nome,
+      descricao: holiday.descricao || "",
+    });
+    setShowHolidayDialog(true);
+  };
+
+  const handleSaveHoliday = () => {
+    if (!holidayData.nome) {
+      toast.error("Preencha o nome do feriado");
+      return;
+    }
+
+    if (editingHoliday) {
+      updateHolidayMutation.mutate({
+        id: editingHoliday.id,
+        updates: {
+          nome: holidayData.nome,
+          descricao: holidayData.descricao,
+        },
+      });
+    } else {
+      const dateExists = holidays.some(
+        (h: Holiday) => h.data === holidayData.data,
+      );
+      if (dateExists) {
+        toast.error("Feriado nesta data já existe");
+        return;
+      }
+      createHolidayMutation.mutate(holidayData);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <div className="space-y-4">
