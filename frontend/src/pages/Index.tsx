@@ -131,32 +131,7 @@ export default function Index() {
       )}
 
       {/* Alerts */}
-      <div className="fixed inset-x-0 top-2 z-50 flex flex-col items-center gap-2 p-4 pointer-events-none">
-        {alerts
-          .filter((a) => a && a.ativo)
-          .filter((a) => !dismissed.includes(a.id))
-          .map((a) => (
-            <div
-              key={a.id}
-              className={`pointer-events-auto w-full max-w-4xl rounded-lg px-4 py-3 shadow-md text-sm ${a.severity === "danger" ? "bg-red-50 border border-red-300 text-red-800" : a.severity === "warning" ? "bg-yellow-50 border border-yellow-300 text-yellow-800" : "bg-blue-50 border border-blue-300 text-blue-800"}`}
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="font-semibold">{a.title || "Aviso"}</div>
-                  <div className="mt-1">{a.message}</div>
-                </div>
-                <div className="flex-shrink-0">
-                  <button
-                    onClick={() => dismiss(a.id)}
-                    className="px-3 py-1 rounded-md bg-background"
-                  >
-                    Fechar
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-      </div>
+      <AlertsDisplay alerts={alerts} onDismiss={dismiss} dismissed={dismissed} />
 
       {/* Hero */}
       <section className="relative overflow-hidden">
