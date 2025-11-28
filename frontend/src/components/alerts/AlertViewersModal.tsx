@@ -73,12 +73,15 @@ export default function AlertViewersModal({
     }
   };
 
-  const extractNameAndSurname = (nome: string) => {
-    const parts = nome.split(" ");
+  const extractNameAndSurname = (viewer: AlertViewer) => {
+    if (viewer.sobrenome) {
+      return `${viewer.nome} ${viewer.sobrenome}`;
+    }
+    const parts = viewer.nome.split(" ");
     if (parts.length >= 2) {
       return `${parts[0]} ${parts[parts.length - 1]}`;
     }
-    return nome;
+    return viewer.nome;
   };
 
   return (
