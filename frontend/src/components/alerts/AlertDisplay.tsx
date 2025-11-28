@@ -42,6 +42,7 @@ export default function AlertDisplay() {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [dismissedAlerts, setDismissedAlerts] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
+  const [markedAsViewedRef] = useState(() => new Set<number>());
 
   useEffect(() => {
     loadAlerts();
