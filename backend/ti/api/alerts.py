@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from io import BytesIO
 from datetime import datetime
+from pydantic import BaseModel
 import base64
 import json
 from core.db import get_db, engine
@@ -20,6 +21,12 @@ except ImportError:
     # Se não existir schema, vamos trabalhar sem ele
     AlertOut = None
     AlertCreate = None
+
+class AlertViewRequest(BaseModel):
+    usuario_id: Optional[str] = None
+    usuario_email: Optional[str] = None
+    usuario_nome: Optional[str] = None
+    usuario_sobrenome: Optional[str] = None
 
 router = APIRouter(prefix="/alerts", tags=["TI - Alerts"]) 
 
@@ -267,7 +274,11 @@ def delete_alert(alert_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{alert_id}/visualizar")
-def mark_alert_viewed(alert_id: int, usuario_id: Optional[str] = None, db: Session = Depends(get_db)):
+def mark_alert_viewed(
+    alert_id: int,
+    request_data: AlertViewRequest,
+    db: Session = Depends(get_db)
+):
     """
     Marca um alerta como visualizado por um usuário
     """
@@ -277,8 +288,10 @@ def mark_alert_viewed(alert_id: int, usuario_id: Optional[str] = None, db: Sessi
         if not alert:
             raise HTTPException(status_code=404, detail="Alerta não encontrado")
 
-        if not usuario_id:
-            usuario_id = "anonymous"
+        usuario_id = request_data.usuario_id or "anonymous"
+        usuario_email = request_data.usuario_email or usuario_id
+        usuario_nome = request_data.usuario_nome or usuario_id
+        usuario_sobrenome = request_data.usuario_sobrenome or ""
 
         # Carregar array de usuários que visualizaram
         usuarios_visualizaram = alert.usuarios_visualizaram
@@ -292,13 +305,24 @@ def mark_alert_viewed(alert_id: int, usuario_id: Optional[str] = None, db: Sessi
                 except:
                     usuarios_visualizaram = []
 
-        # Adicionar usuario_id se não estiver na lista
-        if usuario_id not in usuarios_visualizaram:
-            usuarios_visualizaram.append(usuario_id)
+        # Criar objeto de visualização com timestamp
+        visualizacao = {
+            "id": usuario_id,
+            "email": usuario_email,
+            "nome": usuario_nome,
+            "sobrenome": usuario_sobrenome,
+            "visualizado_em": datetime.now().isoformat()
+        }
+
+        # Verificar se o usuário já visualizou
+        ja_visualizou = any(v.get("id") == usuario_id for v in usuarios_visualizaram if isinstance(v, dict))
+
+        if not ja_visualizou:
+            usuarios_visualizaram.append(visualizacao)
             alert.usuarios_visualizaram = usuarios_visualizaram
             db.commit()
             db.refresh(alert)
-            print(f"[ALERTS] Alerta {alert_id} marcado como visualizado por {usuario_id}")
+            print(f"[ALERTS] Alerta {alert_id} marcado como visualizado por {usuario_email}")
 
         return {"ok": True, "message": "Alerta marcado como visualizado"}
 
@@ -312,6 +336,60 @@ def mark_alert_viewed(alert_id: int, usuario_id: Optional[str] = None, db: Sessi
         raise HTTPException(status_code=500, detail=f"Erro ao marcar alerta: {str(e)}")
 
 
+@router.get("/{alert_id}/viewers")
+def get_alert_viewers(alert_id: int, db: Session = Depends(get_db)):
+    """
+    Retorna a lista de usuários que visualizaram um alerta com timestamps
+    """
+    try:
+        alert = db.query(Alert).filter(Alert.id == alert_id).first()
+
+        if not alert:
+            raise HTTPException(status_code=404, detail="Alerta não encontrado")
+
+        usuarios_visualizaram = alert.usuarios_visualizaram
+        if not usuarios_visualizaram:
+            return {"viewers": []}
+
+        # Parsear se for string JSON
+        if isinstance(usuarios_visualizaram, str):
+            try:
+                usuarios_visualizaram = json.loads(usuarios_visualizaram)
+            except:
+                usuarios_visualizaram = []
+
+        # Converter para lista de dicts ordenada por data
+        viewers = []
+        for user in usuarios_visualizaram:
+            if isinstance(user, dict):
+                viewers.append(user)
+            else:
+                # Legacy format: just a string ID
+                viewers.append({
+                    "id": user,
+                    "email": user,
+                    "nome": user,
+                    "sobrenome": "",
+                    "visualizado_em": None
+                })
+
+        # Ordenar por data de visualização (mais recentes primeiro)
+        viewers.sort(
+            key=lambda x: x.get("visualizado_em") or "",
+            reverse=True
+        )
+
+        return {"viewers": viewers}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[ALERTS] Erro ao buscar viewers do alerta {alert_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar viewers: {str(e)}")
+
+
 @router.get("/debug/test")
 def debug_test(db: Session = Depends(get_db)):
     """
@@ -319,16 +397,16 @@ def debug_test(db: Session = Depends(get_db)):
     """
     try:
         from sqlalchemy import inspect
-        
+
         # Inspecionar o modelo
         inspector = inspect(Alert)
         columns = {}
         for col in inspector.columns:
             columns[col.key] = str(col.type)
-        
+
         # Tentar fazer uma query simples
         count = db.query(Alert).count()
-        
+
         return {
             "status": "ok",
             "model_columns": columns,

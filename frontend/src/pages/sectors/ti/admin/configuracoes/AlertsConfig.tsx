@@ -14,6 +14,7 @@ import {
   Plus,
   Sparkles,
   Monitor,
+  Eye,
 } from "lucide-react";
 import {
   Card,
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ALERT_PAGES, groupPagesByCategory } from "@/config/alert-pages";
+import AlertViewersModal from "@/components/alerts/AlertViewersModal";
 
 type MediaItem = { id: number | string; url?: string; type?: string };
 
@@ -74,6 +76,10 @@ export default function AlertsConfig() {
   const [imagemFile, setImagemFile] = useState<File | null>(null);
   const [imagemPreview, setImagemPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [viewersModalOpen, setViewersModalOpen] = useState(false);
+  const [selectedAlertForViewers, setSelectedAlertForViewers] = useState<
+    any | null
+  >(null);
 
   const loadMedia = async () => {
     const res = await apiFetch("/login-media");
@@ -169,6 +175,11 @@ export default function AlertsConfig() {
       return;
     }
     await loadAlerts();
+  };
+
+  const openViewersModal = (alert: any) => {
+    setSelectedAlertForViewers(alert);
+    setViewersModalOpen(true);
   };
 
   return (
@@ -563,13 +574,24 @@ export default function AlertsConfig() {
                         {alert.usuarios_visualizaram &&
                           alert.usuarios_visualizaram.length > 0 && (
                             <div className="pt-2 border-t">
-                              <p className="text-xs font-medium text-muted-foreground">
-                                Visualizado por{" "}
-                                {alert.usuarios_visualizaram.length}{" "}
-                                {alert.usuarios_visualizaram.length === 1
-                                  ? "usuário"
-                                  : "usuários"}
-                              </p>
+                              <div className="flex items-center justify-between">
+                                <p className="text-xs font-medium text-muted-foreground">
+                                  Visualizado por{" "}
+                                  {alert.usuarios_visualizaram.length}{" "}
+                                  {alert.usuarios_visualizaram.length === 1
+                                    ? "usuário"
+                                    : "usuários"}
+                                </p>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => openViewersModal(alert)}
+                                  className="h-7 text-xs"
+                                >
+                                  <Eye className="w-3 h-3 mr-1" />
+                                  Ver lista
+                                </Button>
+                              </div>
                             </div>
                           )}
 
@@ -603,6 +625,16 @@ export default function AlertsConfig() {
           </div>
         )}
       </div>
+
+      {/* Viewers Modal */}
+      {selectedAlertForViewers && (
+        <AlertViewersModal
+          alertId={selectedAlertForViewers.id}
+          alertTitle={selectedAlertForViewers.title}
+          open={viewersModalOpen}
+          onOpenChange={setViewersModalOpen}
+        />
+      )}
     </div>
   );
 }
