@@ -74,6 +74,7 @@ def criar_chamado(db: Session, payload: ChamadoCreate) -> Chamado:
     if payload.visita:
         data_visita = date.fromisoformat(payload.visita)
 
+    agora = now_brazil_naive()
     novo = Chamado(
         codigo=codigo,
         protocolo=protocolo,
@@ -86,11 +87,26 @@ def criar_chamado(db: Session, payload: ChamadoCreate) -> Chamado:
         internet_item=payload.internetItem,
         descricao=payload.descricao,
         data_visita=data_visita,
-        data_abertura=now_brazil_naive(),
+        data_abertura=agora,
         status="Aberto",
         prioridade="Normal",
     )
     db.add(novo)
     db.commit()
     db.refresh(novo)
+
+    # Criar registro inicial no histórico de status
+    try:
+        historico_inicial = HistoricoStatus(
+            chamado_id=novo.id,
+            status="Aberto",
+            data_inicio=agora,
+            descricao="Chamado criado",
+            created_at=agora,
+        )
+        db.add(historico_inicial)
+        db.commit()
+    except Exception:
+        pass
+
     return novo
