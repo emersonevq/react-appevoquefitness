@@ -127,7 +127,8 @@ async def create_alert(
                 description=description,
                 severity=severity,
                 imagem_blob=imagem_blob,
-                imagem_mime_type=imagem_mime_type
+                imagem_mime_type=imagem_mime_type,
+                pages=pages
             )
         except TypeError as e:
             # Se falhar, tentar sem description
@@ -137,7 +138,8 @@ async def create_alert(
                 message=message,
                 severity=severity,
                 imagem_blob=imagem_blob,
-                imagem_mime_type=imagem_mime_type
+                imagem_mime_type=imagem_mime_type,
+                pages=pages
             )
             # Tentar adicionar description depois se o campo existir
             if hasattr(new_alert, 'description'):
